@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/api/client.ts","./src/components/authpage.tsx","./src/components/chatsidebar.tsx","./src/components/messagelist.tsx","./src/components/modelselector.tsx","./src/types/index.ts"],"errors":true,"version":"5.9.3"}
