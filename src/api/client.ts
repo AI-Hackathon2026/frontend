@@ -2,14 +2,18 @@ import type {
   ChatHistory,
   ChatSummary,
   CreateChatResponse,
+  EmbeddingInfo,
   KnhanesFilesResponse,
   KnhanesGroundResponse,
   KnhanesQueryRequest,
   KnhanesQueryResponse,
+  PdfFile,
+  RagDocument,
 } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 const USERNAME_KEY = "competition_username";
+const ROLE_KEY = "competition_role";
 
 function getCsrfValue(): string | null {
   const match = document.cookie.match(/(?:^|;\s*)csrfValue=([^;]+)/);
@@ -48,12 +52,28 @@ export function clearUsername() {
   sessionStorage.removeItem(USERNAME_KEY);
 }
 
+export function saveRole(role: string) {
+  sessionStorage.setItem(ROLE_KEY, role);
+}
+
+export function loadRole(): string | null {
+  return sessionStorage.getItem(ROLE_KEY);
+}
+
+export function clearRole() {
+  sessionStorage.removeItem(ROLE_KEY);
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(options.headers);
-  if (options.body && !headers.has("Content-Type")) {
+  if (
+    options.body &&
+    !(options.body instanceof FormData) &&
+    !headers.has("Content-Type")
+  ) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -95,6 +115,7 @@ export const api = {
   },
 
   signOut() {
+    clearRole();
     return request<{ message: string }>("/auth/signout", {
       method: "DELETE",
     });
@@ -161,10 +182,11 @@ export const api = {
     });
   },
 
-  sendToChatbot(chatId: string, text: string) {
+  sendToChatbot(chatId: string, text: string, signal?: AbortSignal) {
     return request<string>("/chatbot", {
       method: "POST",
       body: JSON.stringify({ chatId, text }),
+      signal,
     });
   },
 
@@ -180,6 +202,70 @@ export const api = {
     return request<{ message: string }>("/chatbot/model", {
       method: "PATCH",
       body: JSON.stringify({ model }),
+    });
+  },
+
+  async listFiles(): Promise<PdfFile[]> {
+    const raw = await request<unknown>("/files");
+    console.log("[api.listFiles] raw:", JSON.stringify(raw));
+    if (Array.isArray(raw)) return raw as PdfFile[];
+    if (raw && typeof raw === "object") {
+      const obj = raw as Record<string, unknown>;
+      const arr = obj.files ?? obj.data ?? obj.items ?? obj.results ?? [];
+      if (Array.isArray(arr)) return arr as PdfFile[];
+    }
+    return [];
+  },
+
+  getFile(fileId: string) {
+    return request<PdfFile>(`/files/${fileId}`);
+  },
+
+  searchFiles(filename: string) {
+    return request<PdfFile[]>(`/files/search?filename=${encodeURIComponent(filename)}`);
+  },
+
+  uploadFile(file: File) {
+    const formData = new FormData();
+    formData.append("pdf", file);
+    return request<PdfFile>("/files/upload", {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  deleteFile(fileId: string) {
+    return request<void>(`/files/${fileId}`, { method: "DELETE" });
+  },
+
+  listUsers() {
+    return request<unknown[]>("/users");
+  },
+
+  // ── RAG / Embedding management ───────────────────────────────
+  /** GET /files/rag/documents — list all documents indexed in the vector store. */
+  async listEmbeddings(): Promise<EmbeddingInfo[]> {
+    const raw = await request<RagDocument[]>("/files/rag/documents");
+    return raw.map((doc) => ({
+      // The last path segment is a stable ID within the store
+      fileId: doc.name,
+      filename: doc.displayName,
+      ragDocumentName: doc.name,
+    }));
+  },
+
+  /** POST /chatbot/embeddings/:fileId — chunk, embed, and store the PDF. */
+  embedFile(fileId: string) {
+    return request<{ message: string }>(`/chatbot/embeddings/${fileId}`, {
+      method: "POST",
+    });
+  },
+
+  /** DELETE /files/rag/documents — remove a document from the vector store by its rag name. */
+  deleteEmbedding(ragDocumentName: string) {
+    return request<void>("/files/rag/documents", {
+      method: "DELETE",
+      body: JSON.stringify({ name: ragDocumentName }),
     });
   },
 
@@ -213,6 +299,9 @@ export async function withAuthRetry<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw error;
+    }
     const message = error instanceof Error ? error.message : "";
     if (AUTH_RETRY_MESSAGES.some((m) => message.includes(m))) {
       await api.refresh();

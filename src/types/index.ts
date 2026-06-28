@@ -81,4 +81,49 @@ export interface KnhanesGroundResponse {
   routine: KnhanesRoutine | null;
 }
 
-export type AppTab = "chat" | "knhanes";
+export type AppTab = "chat" | "knhanes" | "admin";
+
+/** Raw shape returned by GET /files/rag/documents */
+export interface RagDocument {
+  name: string;        // e.g. "fileSearchStores/globalpdfstore-.../documents/bitcoinpdf-..."
+  displayName: string; // e.g. "bitcoin.pdf"
+}
+
+export interface EmbeddingInfo {
+  fileId: string;       // matches PdfFile id, or ragDocumentName when matched by filename
+  filename?: string;
+  chunkCount?: number;
+  embeddedAt?: string;
+  ragDocumentName?: string; // full path used for DELETE
+  [key: string]: unknown;
+}
+
+export interface PdfFile {
+  id?: string;
+  fileId?: string;
+  _id?: string;
+  filename?: string;
+  originalName?: string;
+  storedName?: string;
+  name?: string;
+  size?: number;
+  fileSize?: number;
+  createdAt?: string;
+  uploadedAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
+
+export function resolvePdfFileId(file: PdfFile): string {
+  return (file.id ?? file.fileId ?? file._id ?? "") as string;
+}
+
+export function resolvePdfFileName(file: PdfFile): string {
+  return (
+    file.filename ??
+    file.originalName ??
+    file.storedName ??
+    file.name ??
+    resolvePdfFileId(file)
+  ) as string;
+}

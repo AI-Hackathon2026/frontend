@@ -1,7 +1,11 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api, matchModelToList, withAuthRetry } from "../api/client";
 import { ChatSidebar } from "./ChatSidebar";
-import { MessageList } from "./MessageList";
+import {
+  type AiPendingState,
+  type PendingUserMessage,
+  MessageList,
+} from "./MessageList";
 import { ModelSelector } from "./ModelSelector";
 import type { ChatHistory, ChatSummary } from "../types";
 
@@ -18,9 +22,16 @@ export function ChatTab({ username }: ChatTabProps) {
   const [models, setModels] = useState<string[]>([]);
   const [currentModel, setCurrentModel] = useState("");
   const [sending, setSending] = useState(false);
+  const [pendingUserMessage, setPendingUserMessage] =
+    useState<PendingUserMessage | null>(null);
+  const [aiPending, setAiPending] = useState<AiPendingState | null>(null);
   const [error, setError] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [loading, setLoading] = useState(true);
+  const activeChatIdRef = useRef(activeChatId);
+  activeChatIdRef.current = activeChatId;
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const typewriterStopRef = useRef(false);
 
   const loadChats = useCallback(async () => {
     const data = await withAuthRetry(() => api.listChats());
@@ -58,8 +69,16 @@ export function ChatTab({ username }: ChatTabProps) {
     if (!activeChatId) {
       setChatHistory(null);
       setChatTitle("");
+      setPendingUserMessage(null);
+      setAiPending(null);
       return;
     }
+    setPendingUserMessage(null);
+    setAiPending(null);
+    setSending(false);
+    abortControllerRef.current?.abort();
+    typewriterStopRef.current = true;
+    abortControllerRef.current = null;
     loadChatHistory(activeChatId).catch((err) => {
       setError(
         err instanceof Error ? err.message : "대화를 불러올 수 없습니다.",
@@ -104,25 +123,86 @@ export function ChatTab({ username }: ChatTabProps) {
     }
   }
 
+  async function finalizeGeneration() {
+    if (!activeChatId) return;
+    abortControllerRef.current = null;
+    typewriterStopRef.current = false;
+    setPendingUserMessage(null);
+    setAiPending(null);
+    setSending(false);
+    try {
+      await loadChatHistory(activeChatId);
+      await loadChats();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "대화를 불러올 수 없습니다.",
+      );
+    }
+  }
+
   async function handleSend(event: FormEvent) {
     event.preventDefault();
     if (!activeChatId || !input.trim() || sending) return;
 
     const text = input.trim();
+    const chatId = activeChatId;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    typewriterStopRef.current = false;
+
     setInput("");
     setSending(true);
     setError("");
+    setPendingUserMessage({
+      id: `pending-user-${Date.now()}`,
+      text,
+      createdAt: new Date().toISOString(),
+    });
+    setAiPending({ phase: "waiting" });
 
     try {
-      await withAuthRetry(() => api.sendToChatbot(activeChatId, text));
-      await loadChatHistory(activeChatId);
-      await loadChats();
+      const aiResponse = await withAuthRetry(() =>
+        api.sendToChatbot(chatId, text, controller.signal),
+      );
+      if (activeChatIdRef.current !== chatId || typewriterStopRef.current) {
+        return;
+      }
+      setAiPending({ phase: "typing", text: aiResponse });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "메시지 전송 실패");
-      setInput(text);
-    } finally {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+      if (activeChatIdRef.current !== chatId) {
+        return;
+      }
+      const errorText =
+        err instanceof Error ? err.message : "메시지 전송에 실패했습니다.";
+      setAiPending({ phase: "error", text: errorText });
       setSending(false);
+      abortControllerRef.current = null;
     }
+  }
+
+  function handleStop(event: FormEvent) {
+    event.preventDefault();
+    if (!sending) return;
+
+    typewriterStopRef.current = true;
+    abortControllerRef.current?.abort();
+
+    if (aiPending?.phase === "typing") {
+      return;
+    }
+
+    void finalizeGeneration();
+  }
+
+  async function handleTypingComplete() {
+    await finalizeGeneration();
+  }
+
+  async function handleTypingStopped() {
+    await finalizeGeneration();
   }
 
   async function handleEditMessage(messageId: string, text: string) {
@@ -207,19 +287,26 @@ export function ChatTab({ username }: ChatTabProps) {
           <>
             <MessageList
               messages={chatHistory?.messages ?? []}
+              pendingUserMessage={pendingUserMessage}
+              aiPending={aiPending}
+              typewriterStopRef={typewriterStopRef}
+              onTypingComplete={handleTypingComplete}
+              onTypingStopped={handleTypingStopped}
               onEditMessage={handleEditMessage}
               onDeleteMessage={handleDeleteMessage}
             />
 
-            <form className="composer" onSubmit={handleSend}>
+            <form
+              className="composer"
+              onSubmit={sending ? handleStop : handleSend}
+            >
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="메시지를 입력하세요..."
                 rows={2}
-                disabled={sending}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  if (e.key === "Enter" && !e.shiftKey && !sending) {
                     e.preventDefault();
                     void handleSend(e);
                   }
@@ -227,10 +314,10 @@ export function ChatTab({ username }: ChatTabProps) {
               />
               <button
                 type="submit"
-                className="primary-btn"
-                disabled={sending || !input.trim()}
+                className={`primary-btn${sending ? " stop-btn" : ""}`}
+                disabled={!sending && !input.trim()}
               >
-                {sending ? "전송 중..." : "전송"}
+                {sending ? "중지" : "전송"}
               </button>
             </form>
           </>
