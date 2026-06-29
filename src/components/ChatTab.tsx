@@ -273,8 +273,11 @@ export function ChatTab({ username }: ChatTabProps) {
 
         {!activeChatId ? (
           <div className="welcome-panel">
-            <h2>AI 챗봇</h2>
-            <p>왼쪽에서 새 대화를 만들거나 기존 대화를 선택하세요.</p>
+            <h2>HeAIth AI 건강 상담</h2>
+            <p>
+              AI와 대화하며 건강 관련 질문에 답변받으세요. 왼쪽에서 새
+              대화를 만들거나 기존 대화를 선택하세요.
+            </p>
             <button
               type="button"
               className="primary-btn"

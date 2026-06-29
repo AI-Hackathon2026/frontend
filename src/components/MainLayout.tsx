@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { AppTab } from "../types";
+import { HeAIthLogo } from "./HeAIthLogo";
 
 interface MainLayoutProps {
   username: string;
@@ -22,7 +23,7 @@ export function MainLayout({
     <div className="main-layout">
       <header className="main-header">
         <div className="main-brand">
-          <span className="auth-badge">2026 AI 경진대회</span>
+          <HeAIthLogo size="sm" />
         </div>
 
         <nav className="main-tabs" aria-label="주요 메뉴">
