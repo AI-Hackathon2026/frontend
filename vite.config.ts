@@ -11,6 +11,7 @@ export default defineConfig({
       "/chatbot": { target: "http://localhost:4000", changeOrigin: true },
       "/users": { target: "http://localhost:4000", changeOrigin: true },
       "/knhanes": { target: "http://localhost:4000", changeOrigin: true },
+      "/healthcare": { target: "http://localhost:4000", changeOrigin: true },
       "/files": { target: "http://localhost:4000", changeOrigin: true },
     },
   },

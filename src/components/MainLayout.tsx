@@ -43,6 +43,13 @@ export function MainLayout({
               >
                 KNHANES 건강통계
               </button>
+              <button
+                type="button"
+                className={activeTab === "healthcare" ? "active" : ""}
+                onClick={() => onTabChange("healthcare")}
+              >
+                건강 평가
+              </button>
             </>
           )}
           {isAdmin && (

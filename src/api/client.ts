@@ -3,6 +3,8 @@ import type {
   ChatSummary,
   CreateChatResponse,
   EmbeddingInfo,
+  HealthcareAssessmentResponse,
+  HealthcareRequest,
   KnhanesFilesResponse,
   KnhanesGroundResponse,
   KnhanesQueryRequest,
@@ -282,6 +284,13 @@ export const api = {
 
   knhanesGround(body: { sex?: string; age?: string; income?: string }) {
     return request<KnhanesGroundResponse>("/knhanes/ground", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  submitHealthcareAssessment(body: HealthcareRequest) {
+    return request<HealthcareAssessmentResponse>("/healthcare", {
       method: "POST",
       body: JSON.stringify(body),
     });

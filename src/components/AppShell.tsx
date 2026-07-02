@@ -9,6 +9,7 @@ import {
 } from "../api/client";
 import { AdminTab } from "./AdminTab";
 import { ChatTab } from "./ChatTab";
+import { HealthcareAssessmentPage } from "./HealthcareAssessmentPage";
 import { KnhanesPage } from "./KnhanesPage";
 import { MainLayout } from "./MainLayout";
 import type { AppTab } from "../types";
@@ -84,6 +85,8 @@ export function AppShell() {
         <AdminTab />
       ) : activeTab === "knhanes" && !isAdmin ? (
         <KnhanesPage />
+      ) : activeTab === "healthcare" && !isAdmin ? (
+        <HealthcareAssessmentPage />
       ) : !isAdmin ? (
         <ChatTab username={username} />
       ) : (

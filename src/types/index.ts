@@ -81,7 +81,46 @@ export interface KnhanesGroundResponse {
   routine: KnhanesRoutine | null;
 }
 
-export type AppTab = "chat" | "knhanes" | "admin";
+export type AppTab = "chat" | "knhanes" | "healthcare" | "admin";
+
+export type Gender = "male" | "female";
+export type ObesityStatus = "obese" | "underweight" | "normal";
+export type ConditionStatus = "positive" | "normal" | "unknown";
+
+export interface HealthcareRequest {
+  height: number;
+  weight: number;
+  age: number;
+  gender: Gender;
+  systolicBp?: number;
+  diastolicBp?: number;
+  onHypertensionMedication?: boolean;
+  fastingBloodSugar?: number;
+  hba1c?: number;
+  onDiabetesMedication?: boolean;
+  totalCholesterol?: number;
+  onCholesterolMedication?: boolean;
+}
+
+export interface ConditionAssessment {
+  status: ConditionStatus;
+  label: string;
+  criteria: string;
+  vulnerabilityGuide: string | null;
+  lifestyleGuide: string | null;
+}
+
+export interface ObesityAssessment extends Omit<ConditionAssessment, "status"> {
+  status: ObesityStatus;
+}
+
+export interface HealthcareAssessmentResponse {
+  bmi: number;
+  obesity: ObesityAssessment;
+  hypertension: ConditionAssessment;
+  diabetes: ConditionAssessment;
+  dyslipidemia: ConditionAssessment;
+}
 
 /** Raw shape returned by GET /files/rag/documents */
 export interface RagDocument {

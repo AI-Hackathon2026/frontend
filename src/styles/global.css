@@ -1054,6 +1054,258 @@ button {
   margin: 0;
 }
 
+/* ── Healthcare assessment ── */
+.healthcare-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 2rem;
+  display: grid;
+  gap: 2rem;
+}
+
+.healthcare-error {
+  margin-bottom: 0;
+}
+
+.healthcare-section h2 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+}
+
+.healthcare-form {
+  display: grid;
+  gap: 1.25rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+
+.healthcare-fieldset {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.healthcare-fieldset legend {
+  padding: 0 0.35rem;
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.healthcare-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.healthcare-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.healthcare-form input,
+.healthcare-form select {
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.healthcare-checkbox {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text) !important;
+  cursor: pointer;
+}
+
+.healthcare-checkbox input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--primary);
+}
+
+.healthcare-bmi-banner {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 229, 192, 0.1),
+    rgba(77, 159, 255, 0.08)
+  );
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  margin-bottom: 1.25rem;
+}
+
+.healthcare-bmi-label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.healthcare-bmi-value {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.healthcare-bmi-unit {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.healthcare-result-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.healthcare-result-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+
+.healthcare-result-card--risk {
+  border-color: rgba(255, 107, 122, 0.35);
+  background: rgba(255, 107, 122, 0.04);
+}
+
+.healthcare-result-card--caution {
+  border-color: rgba(255, 179, 71, 0.35);
+  background: rgba(255, 179, 71, 0.04);
+}
+
+.healthcare-result-card--ok {
+  border-color: rgba(0, 229, 192, 0.3);
+  background: rgba(0, 229, 192, 0.04);
+}
+
+.healthcare-result-card--unknown {
+  border-color: var(--border);
+  opacity: 0.92;
+}
+
+.healthcare-result-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.healthcare-result-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  flex: 1;
+}
+
+.healthcare-result-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.healthcare-status-badge {
+  display: inline-block;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.healthcare-status-badge--risk {
+  background: rgba(255, 107, 122, 0.18);
+  color: #ff8a96;
+}
+
+.healthcare-status-badge--caution {
+  background: rgba(255, 179, 71, 0.18);
+  color: #ffb347;
+}
+
+.healthcare-status-badge--ok {
+  background: rgba(0, 229, 192, 0.15);
+  color: var(--primary);
+}
+
+.healthcare-status-badge--unknown {
+  background: rgba(139, 154, 184, 0.15);
+  color: var(--text-muted);
+}
+
+.healthcare-unknown-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.healthcare-criteria-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.healthcare-criteria {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.healthcare-guide-block {
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  margin-top: 0.75rem;
+}
+
+.healthcare-guide-block h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.healthcare-guide-block p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.healthcare-guide-block--stats {
+  background: rgba(77, 159, 255, 0.08);
+  border: 1px solid rgba(77, 159, 255, 0.18);
+}
+
+.healthcare-guide-block--action {
+  background: rgba(0, 229, 192, 0.06);
+  border: 1px solid rgba(0, 229, 192, 0.15);
+}
+
+@media (max-width: 640px) {
+  .healthcare-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .muted {
   color: var(--text-muted);
 }
