@@ -34,7 +34,7 @@ export function AuthForm({
   submitLabel,
 }: AuthFormProps) {
   const defaultSubmitLabel =
-    mode === "signin" ? "로그인" : "회원가입 후 시작";
+    mode === "signin" ? "로그인" : "회원가입";
 
   return (
     <form onSubmit={onSubmit} className="auth-form">
