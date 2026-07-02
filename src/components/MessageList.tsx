@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
 import type { Message } from "../types";
 import { MarkdownContent } from "./MarkdownContent";
+import { RoutineCard } from "./RoutineCard";
 import { TypewriterText } from "./TypewriterText";
 import { TypingIndicator } from "./TypingIndicator";
 
@@ -24,6 +25,7 @@ interface MessageListProps {
   onTypingStopped?: (partialText: string) => void;
   onEditMessage: (messageId: string, text: string) => Promise<void>;
   onDeleteMessage: (messageId: string) => Promise<void>;
+  onAdjustRoutine?: () => void;
 }
 
 const SCROLL_THRESHOLD = 80;
@@ -37,6 +39,7 @@ export function MessageList({
   onTypingStopped,
   onEditMessage,
   onDeleteMessage,
+  onAdjustRoutine,
 }: MessageListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -154,6 +157,8 @@ export function MessageList({
                 <div className="message-bubble">
                   {isUser ? (
                     message.text
+                  ) : message.kind === "ROUTINE" && message.payload ? (
+                    <RoutineCard routine={message.payload} onAdjust={onAdjustRoutine} />
                   ) : (
                     <MarkdownContent content={message.text} />
                   )}

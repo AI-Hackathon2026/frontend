@@ -5,6 +5,8 @@ import type {
   EmbeddingInfo,
   HealthcareAssessmentResponse,
   HealthcareRequest,
+  HealthProfileInput,
+  HealthRoutineResponse,
   KnhanesFilesResponse,
   KnhanesGroundResponse,
   KnhanesQueryRequest,
@@ -209,7 +211,6 @@ export const api = {
 
   async listFiles(): Promise<PdfFile[]> {
     const raw = await request<unknown>("/files");
-    console.log("[api.listFiles] raw:", JSON.stringify(raw));
     if (Array.isArray(raw)) return raw as PdfFile[];
     if (raw && typeof raw === "object") {
       const obj = raw as Record<string, unknown>;
@@ -238,6 +239,13 @@ export const api = {
 
   deleteFile(fileId: string) {
     return request<void>(`/files/${fileId}`, { method: "DELETE" });
+  },
+
+  generateRoutine(chatId: string, profile: HealthProfileInput) {
+    return request<HealthRoutineResponse>(`/chatbot/${chatId}/routine`, {
+      method: "POST",
+      body: JSON.stringify({ profile }),
+    });
   },
 
   listUsers() {

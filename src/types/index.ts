@@ -11,6 +11,48 @@ export interface Message {
   text: string;
   createdAt: string;
   updatedAt: string;
+  kind?: "TEXT" | "ROUTINE";
+  payload?: HealthRoutineResponse;
+}
+
+export type Sex = "M" | "F";
+
+export interface HealthProfileInput {
+  sex: Sex;
+  ageGroup: string;
+  heightCm?: number;
+  weightKg?: number;
+  bmi?: number;
+  waistCircumference?: number;
+  systolicBp?: number;
+  fastingGlucose?: number;
+  smoking: boolean;
+  drinkingFrequencyPerWeek: number;
+  weeklyExerciseDays: number;
+  stressLevel: 1 | 2 | 3 | 4 | 5;
+  incomeLevel?: string;
+}
+
+export interface RoutinePercentileStat {
+  metric: string;
+  userValue: number | string;
+  percentile: number;
+  cohortAverage: number | string;
+}
+
+export interface HealthRoutineResponse {
+  summary: string;
+  dataBasis: {
+    sourceLabel: string;
+    cohort: string;
+    percentiles: RoutinePercentileStat[];
+  };
+  weeklyPlan: Array<{
+    day: "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
+    focus: string;
+    items: string[];
+  }>;
+  cautions: string[];
 }
 
 export interface ChatHistory {
