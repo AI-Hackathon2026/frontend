@@ -1067,6 +1067,72 @@ button {
   margin-bottom: 0;
 }
 
+.healthcare-page--results {
+  position: relative;
+}
+
+.healthcare-section--form {
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.healthcare-fade-out {
+  animation: healthcareFadeOut 0.45s ease forwards;
+  pointer-events: none;
+}
+
+.healthcare-fade-in {
+  animation: healthcareFadeIn 0.55s ease forwards;
+}
+
+@keyframes healthcareFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes healthcareFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.healthcare-transition-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-content: center;
+  gap: 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  background: rgba(6, 10, 18, 0.72);
+  backdrop-filter: blur(8px);
+  animation: healthcareFadeIn 0.35s ease forwards;
+}
+
+.healthcare-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.healthcare-results-header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
 .healthcare-section h2 {
   margin: 0 0 0.35rem;
   font-family: var(--font-display);

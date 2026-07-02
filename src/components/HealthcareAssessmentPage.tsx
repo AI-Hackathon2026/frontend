@@ -1,4 +1,6 @@
 import { FormEvent, useState } from "react";
+
+const FADE_MS = 450;
 import { api, withAuthRetry } from "../api/client";
 import type { Gender, HealthcareAssessmentResponse } from "../types";
 import { HealthcareResultCard } from "./HealthcareResultCard";
@@ -19,10 +21,13 @@ const INITIAL_FORM = {
   onCholesterolMedication: false,
 };
 
+type PagePhase = "form" | "assessing" | "results";
+
 export function HealthcareAssessmentPage() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [phase, setPhase] = useState<PagePhase>("form");
   const [result, setResult] = useState<HealthcareAssessmentResponse | null>(
     null,
   );
@@ -32,6 +37,12 @@ export function HealthcareAssessmentPage() {
     value: (typeof form)[K],
   ) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleReset() {
+    setPhase("form");
+    setResult(null);
+    setError("");
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -50,13 +61,21 @@ export function HealthcareAssessmentPage() {
       return;
     }
 
+    setPhase("assessing");
     setLoading(true);
+    const startedAt = Date.now();
+
     try {
       const response = await withAuthRetry(() =>
         api.submitHealthcareAssessment(body),
       );
       setResult(response);
+
+      const remaining = Math.max(0, FADE_MS - (Date.now() - startedAt));
+      await new Promise((resolve) => setTimeout(resolve, remaining));
+      setPhase("results");
     } catch (err) {
+      setPhase("form");
       setError(
         err instanceof Error
           ? err.message
@@ -68,10 +87,24 @@ export function HealthcareAssessmentPage() {
   }
 
   return (
-    <div className="healthcare-page">
+    <div
+      className={`healthcare-page${phase === "results" ? " healthcare-page--results" : ""}`}
+    >
       {error && <div className="banner-error healthcare-error">{error}</div>}
 
-      <section className="healthcare-section">
+      {phase === "assessing" && (
+        <div className="healthcare-transition-overlay" aria-live="polite">
+          <div className="spinner" aria-hidden />
+          <p>건강 평가 중...</p>
+        </div>
+      )}
+
+      {phase !== "results" && (
+      <section
+        className={`healthcare-section healthcare-section--form${
+          phase === "assessing" ? " healthcare-fade-out" : ""
+        }`}
+      >
         <h2>만성질환 취약성 평가</h2>
         <p className="section-desc">
           2024 국민건강통계 기준으로 비만·고혈압·당뇨·이상지질혈증 위험을
@@ -249,9 +282,17 @@ export function HealthcareAssessmentPage() {
           </button>
         </form>
       </section>
+      )}
 
-      {result && (
-        <section className="healthcare-section healthcare-results">
+      {phase === "results" && result && (
+        <section className="healthcare-section healthcare-results healthcare-fade-in">
+          <div className="healthcare-results-header">
+            <h2>평가 결과</h2>
+            <button type="button" className="ghost-btn" onClick={handleReset}>
+              다시 입력
+            </button>
+          </div>
+
           <div className="healthcare-bmi-banner">
             <span className="healthcare-bmi-label">BMI</span>
             <span className="healthcare-bmi-value">{result.bmi.toFixed(1)}</span>
