@@ -489,9 +489,9 @@ button {
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: calc(100vh - 80px);
-  align-items: center;
+  align-items: start;
   gap: 2rem;
-  padding: 2rem;
+  padding: clamp(2rem, 8vh, 4rem) 2rem 2rem;
   max-width: 1100px;
   margin: 0 auto;
 }
@@ -540,7 +540,8 @@ button {
 
 .auth-split-form {
   display: grid;
-  place-items: center;
+  justify-items: center;
+  align-items: start;
 }
 
 .auth-card--glass {
@@ -548,6 +549,12 @@ button {
   background: var(--glass-bg);
   backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
+}
+
+.auth-card h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.6rem;
+  min-height: 1.3em;
 }
 
 .auth-badge--admin {
@@ -691,17 +698,13 @@ button {
   margin-bottom: 1rem;
 }
 
-.auth-card h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.6rem;
-}
-
 .auth-subtitle {
   margin: 0 0 1.5rem;
   color: var(--text-muted);
 }
 
 .auth-tabs {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
@@ -709,20 +712,41 @@ button {
   background: var(--bg);
   padding: 0.35rem;
   border-radius: 999px;
+  min-height: 2.875rem;
+}
+
+.auth-tabs-slider {
+  position: absolute;
+  top: 0.35rem;
+  left: 0.35rem;
+  width: calc((100% - 0.7rem - 0.5rem) / 2);
+  height: calc(100% - 0.7rem);
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary), var(--accent-blue));
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform;
+}
+
+.auth-tabs-slider[data-active="signup"] {
+  transform: translateX(calc(100% + 0.5rem));
 }
 
 .auth-tabs button {
+  position: relative;
+  z-index: 1;
   border: none;
   background: transparent;
   color: var(--text-muted);
   padding: 0.65rem 1rem;
   border-radius: 999px;
+  font-weight: 600;
+  transition: color 0.32s ease;
 }
 
 .auth-tabs button.active {
-  background: linear-gradient(135deg, var(--primary), var(--accent-blue));
   color: #060a12;
-  font-weight: 600;
 }
 
 .auth-form {

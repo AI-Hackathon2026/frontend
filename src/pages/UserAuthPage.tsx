@@ -82,9 +82,16 @@ export function UserAuthPage() {
             HeAIth 계정으로 AI 건강 서비스를 이용하세요.
           </p>
 
-          <div className="auth-tabs">
+          <div className="auth-tabs" role="tablist" aria-label="인증 방식">
+            <div
+              className="auth-tabs-slider"
+              data-active={mode}
+              aria-hidden
+            />
             <button
               type="button"
+              role="tab"
+              aria-selected={mode === "signin"}
               className={mode === "signin" ? "active" : ""}
               onClick={() => {
                 setMode("signin");
@@ -95,6 +102,8 @@ export function UserAuthPage() {
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={mode === "signup"}
               className={mode === "signup" ? "active" : ""}
               onClick={() => {
                 setMode("signup");
