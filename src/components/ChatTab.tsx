@@ -1,14 +1,13 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api, matchModelToList, withAuthRetry } from "../api/client";
 import { ChatSidebar } from "./ChatSidebar";
-import { HealthProfileModal } from "./HealthProfileModal";
 import {
   type AiPendingState,
   type PendingUserMessage,
   MessageList,
 } from "./MessageList";
 import { ModelSelector } from "./ModelSelector";
-import type { ChatHistory, ChatSummary, HealthProfileInput } from "../types";
+import type { ChatHistory, ChatSummary } from "../types";
 
 interface ChatTabProps {
   username: string;
@@ -29,15 +28,10 @@ export function ChatTab({ username }: ChatTabProps) {
   const [error, setError] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showRoutineModal, setShowRoutineModal] = useState(false);
-  const [routineLoading, setRoutineLoading] = useState(false);
-  const [routineError, setRoutineError] = useState("");
   const activeChatIdRef = useRef(activeChatId);
   activeChatIdRef.current = activeChatId;
   const abortControllerRef = useRef<AbortController | null>(null);
   const typewriterStopRef = useRef(false);
-  const composerRef = useRef<HTMLTextAreaElement>(null);
-
   const loadChats = useCallback(async () => {
     const data = await withAuthRetry(() => api.listChats());
     setChats(data);
@@ -223,53 +217,6 @@ export function ChatTab({ username }: ChatTabProps) {
     await loadChatHistory(activeChatId);
   }
 
-  async function handleGenerateRoutine(profile: HealthProfileInput) {
-    if (!activeChatId) return;
-    setRoutineLoading(true);
-    setRoutineError("");
-    try {
-      const routine = await withAuthRetry(() =>
-        api.generateRoutine(activeChatId, profile),
-      );
-      setShowRoutineModal(false);
-      // Optimistically append routine message; real data arrives on reload
-      setChatHistory((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          messages: [
-            ...prev.messages,
-            {
-              id: `routine-optimistic-${Date.now()}`,
-              from: "AI" as const,
-              text: routine.summary,
-              kind: "ROUTINE" as const,
-              payload: routine,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-          ],
-        };
-      });
-      // Reload to get server-persisted message with real id
-      await loadChatHistory(activeChatId);
-      await loadChats();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "루틴 생성에 실패했습니다.";
-      setRoutineError(msg);
-    } finally {
-      setRoutineLoading(false);
-    }
-  }
-
-  function handleAdjustRoutine() {
-    setShowRoutineModal(false);
-    composerRef.current?.focus();
-    if (composerRef.current) {
-      composerRef.current.placeholder = "예: 운동 강도를 낮춰주세요";
-    }
-  }
-
   async function handleModelChange(model: string) {
     setError("");
     try {
@@ -349,7 +296,6 @@ export function ChatTab({ username }: ChatTabProps) {
               onTypingStopped={handleTypingStopped}
               onEditMessage={handleEditMessage}
               onDeleteMessage={handleDeleteMessage}
-              onAdjustRoutine={handleAdjustRoutine}
             />
 
             <form
@@ -357,7 +303,6 @@ export function ChatTab({ username }: ChatTabProps) {
               onSubmit={sending ? handleStop : handleSend}
             >
               <textarea
-                ref={composerRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="메시지를 입력하세요..."
@@ -368,27 +313,8 @@ export function ChatTab({ username }: ChatTabProps) {
                     void handleSend(e);
                   }
                 }}
-                onFocus={(e) => {
-                  // Reset placeholder if it was changed by adjust-routine
-                  if (e.target.placeholder !== "메시지를 입력하세요...") {
-                    setTimeout(() => {
-                      if (composerRef.current && !input) {
-                        composerRef.current.placeholder = "메시지를 입력하세요...";
-                      }
-                    }, 5000);
-                  }
-                }}
               />
               <div className="composer-btns">
-                <button
-                  type="button"
-                  className="routine-trigger-btn"
-                  onClick={() => { setRoutineError(""); setShowRoutineModal(true); }}
-                  disabled={sending || routineLoading}
-                  title="맞춤 건강 루틴 생성"
-                >
-                  {routineLoading ? <><span className="btn-spinner" /> 생성 중…</> : "💪 맞춤 루틴"}
-                </button>
                 <button
                   type="submit"
                   className={`primary-btn${sending ? " stop-btn" : ""}`}
@@ -398,18 +324,6 @@ export function ChatTab({ username }: ChatTabProps) {
                 </button>
               </div>
             </form>
-
-            {showRoutineModal && (
-              <HealthProfileModal
-                loading={routineLoading}
-                error={routineError}
-                onSubmit={(profile) => void handleGenerateRoutine(profile)}
-                onClose={() => setShowRoutineModal(false)}
-                onRetry={() => {
-                  // re-open form to resubmit; error already shown
-                }}
-              />
-            )}
           </>
         )}
       </main>

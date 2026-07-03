@@ -45,10 +45,10 @@ export function MainLayout({
               </button>
               <button
                 type="button"
-                className={activeTab === "healthcare" ? "active" : ""}
-                onClick={() => onTabChange("healthcare")}
+                className={activeTab === "routine" ? "active" : ""}
+                onClick={() => onTabChange("routine")}
               >
-                건강 평가
+                루틴
               </button>
             </>
           )}

@@ -3,17 +3,23 @@ import type {
   ChatSummary,
   CreateChatResponse,
   EmbeddingInfo,
-  HealthcareAssessmentResponse,
-  HealthcareRequest,
-  HealthProfileInput,
-  HealthRoutineResponse,
+  GenerateRoutineResult,
+  HealthRecord,
+  HealthStatusInput,
   KnhanesFilesResponse,
   KnhanesGroundResponse,
   KnhanesQueryRequest,
   KnhanesQueryResponse,
   PdfFile,
   RagDocument,
+  Routine,
+  RoutineChatMessage,
+  RoutineChatResponse,
+  RoutineDifficulty,
+  RoutineLog,
+  RoutineProjection,
 } from "../types";
+import type { DiseaseKey } from "../constants/routine";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 const USERNAME_KEY = "competition_username";
@@ -103,6 +109,27 @@ async function request<T>(
   return data as T;
 }
 
+async function requestOptional<T>(path: string): Promise<T | null> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      (data as { message?: string }).message ??
+        `요청 실패 (${response.status})`,
+    );
+  }
+
+  return data as T;
+}
+
 export const api = {
   signIn(email: string, password: string) {
     return request<{ message: string; username: string }>("/auth/signin", {
@@ -112,7 +139,7 @@ export const api = {
   },
 
   signUp(email: string, username: string, password: string) {
-    return request<{ message: string; role: string }>("/auth/signup", {
+    return request<{ message: string; role: string }>("/users/signup/user", {
       method: "POST",
       body: JSON.stringify({ email, username, password }),
     });
@@ -241,11 +268,77 @@ export const api = {
     return request<void>(`/files/${fileId}`, { method: "DELETE" });
   },
 
-  generateRoutine(chatId: string, profile: HealthProfileInput) {
-    return request<HealthRoutineResponse>(`/chatbot/${chatId}/routine`, {
+  submitHealthStatus(body: HealthStatusInput) {
+    return request<HealthRecord>("/health-statuses", {
       method: "POST",
-      body: JSON.stringify({ profile }),
+      body: JSON.stringify(body),
     });
+  },
+
+  getHealthRecordMe() {
+    return requestOptional<HealthRecord>("/health-records/me");
+  },
+
+  getHealthRecordProjection(disease: DiseaseKey) {
+    return request<RoutineProjection>(
+      `/health-records/me/projection?disease=${encodeURIComponent(disease)}`,
+    );
+  },
+
+  getRoutineMe() {
+    return requestOptional<Routine>("/routines/me");
+  },
+
+  generateRoutinePlan(body: { difficulty: RoutineDifficulty }) {
+    return request<GenerateRoutineResult>("/routines/generate", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  deactivateRoutine(routineId: string) {
+    return request<void>(`/routines/${routineId}/deactivate`, {
+      method: "PATCH",
+    });
+  },
+
+  sendRoutineChatMessage(chatId: string, text: string) {
+    return request<RoutineChatResponse>(`/routines/chat/${chatId}/message`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+  },
+
+  logRoutineCompletion(routineId: string, completed: boolean) {
+    return request<void>(`/routines/${routineId}/log`, {
+      method: "POST",
+      body: JSON.stringify({ completed }),
+    });
+  },
+
+  getRoutineLogs(routineId: string) {
+    return request<RoutineLog[]>(`/routines/${routineId}/logs`);
+  },
+
+  getRoutineChatMessages(chatId: string) {
+    return request<unknown[]>(`/chats/${chatId}/messages`).then((raw) =>
+      (Array.isArray(raw) ? raw : []).map((item) => {
+        const msg = item as Record<string, unknown>;
+        const roleRaw = msg.role ?? msg.from;
+        const role =
+          roleRaw === "USER" || roleRaw === "AI"
+            ? roleRaw
+            : roleRaw === "user"
+              ? "USER"
+              : "AI";
+        return {
+          id: String(msg.id ?? `msg-${Math.random()}`),
+          role,
+          text: String(msg.text ?? msg.content ?? ""),
+          createdAt: msg.createdAt as string | undefined,
+        } satisfies RoutineChatMessage;
+      }),
+    );
   },
 
   listUsers() {
@@ -292,13 +385,6 @@ export const api = {
 
   knhanesGround(body: { sex?: string; age?: string; income?: string }) {
     return request<KnhanesGroundResponse>("/knhanes/ground", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-  },
-
-  submitHealthcareAssessment(body: HealthcareRequest) {
-    return request<HealthcareAssessmentResponse>("/healthcare", {
       method: "POST",
       body: JSON.stringify(body),
     });

@@ -11,48 +11,13 @@ export interface Message {
   text: string;
   createdAt: string;
   updatedAt: string;
-  kind?: "TEXT" | "ROUTINE";
-  payload?: HealthRoutineResponse;
 }
 
-export type Sex = "M" | "F";
-
-export interface HealthProfileInput {
-  sex: Sex;
-  ageGroup: string;
-  heightCm?: number;
-  weightKg?: number;
-  bmi?: number;
-  waistCircumference?: number;
-  systolicBp?: number;
-  fastingGlucose?: number;
-  smoking: boolean;
-  drinkingFrequencyPerWeek: number;
-  weeklyExerciseDays: number;
-  stressLevel: 1 | 2 | 3 | 4 | 5;
-  incomeLevel?: string;
-}
-
-export interface RoutinePercentileStat {
-  metric: string;
-  userValue: number | string;
-  percentile: number;
-  cohortAverage: number | string;
-}
-
-export interface HealthRoutineResponse {
-  summary: string;
-  dataBasis: {
-    sourceLabel: string;
-    cohort: string;
-    percentiles: RoutinePercentileStat[];
-  };
-  weeklyPlan: Array<{
-    day: "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
-    focus: string;
-    items: string[];
-  }>;
-  cautions: string[];
+export interface RoutineChatMessage {
+  id: string;
+  role: "USER" | "AI";
+  text: string;
+  createdAt?: string;
 }
 
 export interface ChatHistory {
@@ -123,46 +88,74 @@ export interface KnhanesGroundResponse {
   routine: KnhanesRoutine | null;
 }
 
-export type AppTab = "chat" | "knhanes" | "healthcare" | "admin";
+export type AppTab = "chat" | "knhanes" | "routine" | "admin";
 
-export type Gender = "male" | "female";
-export type ObesityStatus = "obese" | "underweight" | "normal";
-export type ConditionStatus = "positive" | "normal" | "unknown";
+export type RoutineDifficulty = "EASY" | "MODERATE" | "HARD";
 
-export interface HealthcareRequest {
+export interface HealthStatusInput {
+  gender: Gender;
+  age: number;
   height: number;
   weight: number;
-  age: number;
-  gender: Gender;
-  systolicBp?: number;
-  diastolicBp?: number;
-  onHypertensionMedication?: boolean;
-  fastingBloodSugar?: number;
-  hba1c?: number;
-  onDiabetesMedication?: boolean;
-  totalCholesterol?: number;
-  onCholesterolMedication?: boolean;
+  alcoholFreq: number;
+  smokeFreq: number;
+  exerciseFreq: number;
 }
 
-export interface ConditionAssessment {
-  status: ConditionStatus;
-  label: string;
-  criteria: string;
-  vulnerabilityGuide: string | null;
-  lifestyleGuide: string | null;
+export interface ExposureRates {
+  OBESITY?: number;
+  HYPERTENSION?: number;
+  DIABETES?: number;
+  SMOKING?: number;
+  ALCOHOL?: number;
+  STRESS?: number;
 }
 
-export interface ObesityAssessment extends Omit<ConditionAssessment, "status"> {
-  status: ObesityStatus;
-}
-
-export interface HealthcareAssessmentResponse {
+export interface HealthRecord {
   bmi: number;
-  obesity: ObesityAssessment;
-  hypertension: ConditionAssessment;
-  diabetes: ConditionAssessment;
-  dyslipidemia: ConditionAssessment;
+  overallScore: number;
+  exposureRates: ExposureRates;
 }
+
+export interface RoutineProjection {
+  current: number;
+  EASY: number;
+  MODERATE: number;
+  HARD: number;
+}
+
+export interface RoutineLog {
+  id?: string;
+  date: string;
+  completed: boolean;
+}
+
+export interface RoutineChatSummary {
+  id: string;
+}
+
+export interface Routine {
+  id: string;
+  difficulty: RoutineDifficulty;
+  title: string;
+  nutritionPlan: string;
+  workoutPlan: string;
+  isActive: boolean;
+  logs?: RoutineLog[];
+  chats?: RoutineChatSummary[];
+}
+
+export interface GenerateRoutineResult {
+  routineId: string;
+  chatId: string;
+}
+
+export interface RoutineChatResponse {
+  aiResponse: string;
+  routineUpdated: boolean;
+}
+
+export type Gender = "MALE" | "FEMALE";
 
 /** Raw shape returned by GET /files/rag/documents */
 export interface RagDocument {

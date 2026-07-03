@@ -1,0 +1,56 @@
+import type { Gender, HealthStatusInput } from "../types";
+
+export function parseRequiredInt(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  if (Number.isNaN(parsed)) return undefined;
+  return Math.round(parsed);
+}
+
+export function buildHealthStatusRequest(form: {
+  gender: "" | Gender;
+  age: string;
+  height: string;
+  weight: string;
+  alcoholFreq: string;
+  smokeFreq: string;
+  exerciseFreq: string;
+}): HealthStatusInput | null {
+  if (!form.gender) return null;
+
+  const age = parseRequiredInt(form.age);
+  const height = parseRequiredInt(form.height);
+  const weight = parseRequiredInt(form.weight);
+  const alcoholFreq = parseRequiredInt(form.alcoholFreq);
+  const smokeFreq = parseRequiredInt(form.smokeFreq);
+  const exerciseFreq = parseRequiredInt(form.exerciseFreq);
+
+  if (
+    age === undefined ||
+    height === undefined ||
+    weight === undefined ||
+    alcoholFreq === undefined ||
+    smokeFreq === undefined ||
+    exerciseFreq === undefined
+  ) {
+    return null;
+  }
+
+  if (age < 1 || age > 120) return null;
+  if (height < 50 || height > 250) return null;
+  if (weight < 20 || weight > 300) return null;
+  if (alcoholFreq < 0 || alcoholFreq > 7) return null;
+  if (smokeFreq < 0 || smokeFreq > 7) return null;
+  if (exerciseFreq < 0 || exerciseFreq > 7) return null;
+
+  return {
+    gender: form.gender,
+    age,
+    height,
+    weight,
+    alcoholFreq,
+    smokeFreq,
+    exerciseFreq,
+  };
+}

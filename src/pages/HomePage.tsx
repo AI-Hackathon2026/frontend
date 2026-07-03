@@ -249,17 +249,6 @@ export function HomePage() {
           </button>
         ))}
       </nav>
-
-      {page < PAGE_COUNT - 1 && (
-        <button
-          type="button"
-          className="landing-scroll-hint"
-          onClick={() => goToPage(page + 1)}
-          aria-label="다음 페이지"
-        >
-          <span className="landing-scroll-hint-icon" aria-hidden />
-        </button>
-      )}
     </div>
   );
 }

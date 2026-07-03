@@ -66,7 +66,9 @@ export function UserAuthPage() {
   return (
     <div className="auth-split">
       <div className="auth-split-brand">
-        <HeAIthLogo size="lg" />
+        <Link to="/" className="auth-split-logo-link" aria-label="HeAIth 홈으로">
+          <HeAIthLogo size="lg" />
+        </Link>
         <p className="auth-split-tagline">AI가 만드는 건강의 미래</p>
         <ul className="auth-split-features">
           <li>AI 건강 상담 챗봇</li>
