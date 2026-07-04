@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api, saveUsername } from "../api/client";
 import { AuthForm } from "../components/AuthForm";
 import { HeAIthLogo } from "../components/HeAIthLogo";
+import { SignupSuccessScreen } from "../components/SignupSuccessScreen";
 import { verifyIsAdmin } from "../utils/authRole";
 
 export function UserAuthPage() {
@@ -14,6 +15,7 @@ export function UserAuthPage() {
   const [error, setError] = useState("");
   const [emailHint, setEmailHint] = useState("");
   const [loading, setLoading] = useState(false);
+  const [signupComplete, setSignupComplete] = useState(false);
 
   async function handleEmailBlur() {
     if (mode !== "signup" || !email.trim()) return;
@@ -46,15 +48,7 @@ export function UserAuthPage() {
         navigate("/app", { replace: true });
       } else {
         await api.signUp(email, username, password);
-        const result = await api.signIn(email, password);
-        const isAdmin = await verifyIsAdmin();
-        if (isAdmin) {
-          await api.signOut();
-          setError("관리자 계정입니다. 관리자 로그인을 이용해 주세요.");
-          return;
-        }
-        saveUsername(result.username);
-        navigate("/app", { replace: true });
+        setSignupComplete(true);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "인증에 실패했습니다.");
@@ -79,65 +73,79 @@ export function UserAuthPage() {
 
       <div className="auth-split-form">
         <div className="auth-card auth-card--glass">
-          <h1>{mode === "signin" ? "로그인" : "회원가입"}</h1>
-          <p className="auth-subtitle">
-            HeAIth 계정으로 AI 건강 서비스를 이용하세요.
-          </p>
-
-          <div className="auth-tabs" role="tablist" aria-label="인증 방식">
-            <div
-              className="auth-tabs-slider"
-              data-active={mode}
-              aria-hidden
-            />
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "signin"}
-              className={mode === "signin" ? "active" : ""}
-              onClick={() => {
+          {signupComplete ? (
+            <SignupSuccessScreen
+              email={email}
+              onSignIn={() => {
+                setSignupComplete(false);
                 setMode("signin");
+                setPassword("");
                 setError("");
               }}
-            >
-              로그인
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "signup"}
-              className={mode === "signup" ? "active" : ""}
-              onClick={() => {
-                setMode("signup");
-                setError("");
-              }}
-            >
-              회원가입
-            </button>
-          </div>
+            />
+          ) : (
+            <>
+              <h1>{mode === "signin" ? "로그인" : "회원가입"}</h1>
+              <p className="auth-subtitle">
+                HeAIth 계정으로 AI 건강 서비스를 이용하세요.
+              </p>
 
-          <AuthForm
-            mode={mode}
-            email={email}
-            username={username}
-            password={password}
-            error={error}
-            emailHint={emailHint}
-            loading={loading}
-            onEmailChange={(value) => {
-              setEmail(value);
-              setEmailHint("");
-            }}
-            onUsernameChange={setUsername}
-            onPasswordChange={setPassword}
-            onEmailBlur={() => void handleEmailBlur()}
-            onSubmit={(e) => void handleSubmit(e)}
-          />
+              <div className="auth-tabs" role="tablist" aria-label="인증 방식">
+                <div
+                  className="auth-tabs-slider"
+                  data-active={mode}
+                  aria-hidden
+                />
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === "signin"}
+                  className={mode === "signin" ? "active" : ""}
+                  onClick={() => {
+                    setMode("signin");
+                    setError("");
+                  }}
+                >
+                  로그인
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === "signup"}
+                  className={mode === "signup" ? "active" : ""}
+                  onClick={() => {
+                    setMode("signup");
+                    setError("");
+                  }}
+                >
+                  회원가입
+                </button>
+              </div>
 
-          <p className="auth-footer-link">
-            관리자이신가요?{" "}
-            <Link to="/admin/login">관리자 로그인</Link>
-          </p>
+              <AuthForm
+                mode={mode}
+                email={email}
+                username={username}
+                password={password}
+                error={error}
+                emailHint={emailHint}
+                loading={loading}
+                onEmailChange={(value) => {
+                  setEmail(value);
+                  setEmailHint("");
+                }}
+                onUsernameChange={setUsername}
+                onPasswordChange={setPassword}
+                onEmailBlur={() => void handleEmailBlur()}
+                onSubmit={(e) => void handleSubmit(e)}
+              />
+
+              <p className="auth-footer-link">
+                관리자이신가요?{" "}
+                <Link to="/admin/login">관리자 로그인</Link>
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>

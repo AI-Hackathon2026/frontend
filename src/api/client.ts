@@ -102,11 +102,84 @@ async function request<T>(
   if (!response.ok) {
     throw new Error(
       (data as { message?: string }).message ??
-        `요청 실패 (${response.status})`,
+      `요청 실패 (${response.status})`,
     );
   }
 
   return data as T;
+}
+
+function normalizeHealthRecord(raw: unknown): HealthRecord | null {
+  if (!raw || typeof raw !== "object") return null;
+  const record = raw as Record<string, unknown>;
+
+  if (typeof record.overallScore === "number" && record.exposureRates) {
+    return record as unknown as HealthRecord;
+  }
+
+  const formatted = record.formatted as Record<string, unknown> | undefined;
+  const scoreBlock = formatted?.overallScore as { value?: number } | undefined;
+  const riskItems =
+    (formatted?.exposureRisks as { items?: { disease: string; rate: number }[] })
+      ?.items ?? [];
+
+  const exposureRates: HealthRecord["exposureRates"] = {};
+  for (const item of riskItems) {
+    exposureRates[item.disease as keyof HealthRecord["exposureRates"]] = item.rate;
+  }
+
+  return {
+    bmi: Number(record.bmi ?? 0),
+    overallScore: Number(scoreBlock?.value ?? record.overallScore ?? 0),
+    exposureRates:
+      Object.keys(exposureRates).length > 0
+        ? exposureRates
+        : (record.exposureRates as HealthRecord["exposureRates"]) ?? {},
+  };
+}
+
+function normalizeProjection(raw: unknown): RoutineProjection {
+  const data = raw as Record<string, unknown>;
+  if (typeof data.current === "number") {
+    return data as unknown as RoutineProjection;
+  }
+
+  const formatted = data.formatted as Record<string, unknown> | undefined;
+  const currentBlock = formatted?.current as { rate?: number } | undefined;
+  const projections =
+    (formatted?.projections as { difficulty: string; rate: number }[]) ?? [];
+
+  const result: RoutineProjection = {
+    current: Number(currentBlock?.rate ?? 0),
+    EASY: 0,
+    MODERATE: 0,
+    HARD: 0,
+  };
+
+  for (const item of projections) {
+    if (item.difficulty === "EASY") result.EASY = item.rate;
+    if (item.difficulty === "MODERATE") result.MODERATE = item.rate;
+    if (item.difficulty === "HARD") result.HARD = item.rate;
+  }
+
+  return result;
+}
+
+function normalizeRoutineLog(raw: unknown): RoutineLog {
+  const log = raw as Record<string, unknown>;
+  const date =
+    typeof log.date === "string"
+      ? log.date
+      : typeof log.logDate === "string"
+        ? log.logDate
+        : log.logDate instanceof Date
+          ? log.logDate.toISOString()
+          : String(log.logDate ?? "");
+  return {
+    id: log.id as string | undefined,
+    date,
+    completed: Boolean(log.completed),
+  };
 }
 
 async function requestOptional<T>(path: string): Promise<T | null> {
@@ -123,7 +196,7 @@ async function requestOptional<T>(path: string): Promise<T | null> {
   if (!response.ok) {
     throw new Error(
       (data as { message?: string }).message ??
-        `요청 실패 (${response.status})`,
+      `요청 실패 (${response.status})`,
     );
   }
 
@@ -269,20 +342,22 @@ export const api = {
   },
 
   submitHealthStatus(body: HealthStatusInput) {
-    return request<HealthRecord>("/health-statuses", {
+    return request<HealthRecord>("/healthstatus", {
       method: "POST",
       body: JSON.stringify(body),
     });
   },
 
   getHealthRecordMe() {
-    return requestOptional<HealthRecord>("/health-records/me");
+    return requestOptional<unknown>("/health-records/me").then((raw) =>
+      normalizeHealthRecord(raw),
+    );
   },
 
   getHealthRecordProjection(disease: DiseaseKey) {
-    return request<RoutineProjection>(
+    return request<unknown>(
       `/health-records/me/projection?disease=${encodeURIComponent(disease)}`,
-    );
+    ).then((raw) => normalizeProjection(raw));
   },
 
   getRoutineMe() {
@@ -317,7 +392,9 @@ export const api = {
   },
 
   getRoutineLogs(routineId: string) {
-    return request<RoutineLog[]>(`/routines/${routineId}/logs`);
+    return request<unknown[]>(`/routines/${routineId}/logs`).then((raw) =>
+      (Array.isArray(raw) ? raw : []).map((item) => normalizeRoutineLog(item)),
+    );
   },
 
   getRoutineChatMessages(chatId: string) {

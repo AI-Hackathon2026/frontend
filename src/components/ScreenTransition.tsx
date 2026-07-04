@@ -17,9 +17,15 @@ export function ScreenTransition({
 }: ScreenTransitionProps) {
   const [phase, setPhase] = useState<FadePhase>("in");
   const [shownKey, setShownKey] = useState(screenKey);
-  const [shownChild, setShownChild] = useState(children);
-  const latestChild = useRef(children);
-  latestChild.current = children;
+  const lastSyncedChild = useRef(children);
+  const pendingKey = useRef(screenKey);
+
+  const transitioning = screenKey !== shownKey;
+  if (!transitioning) {
+    lastSyncedChild.current = children;
+  }
+
+  const displayChild = transitioning ? lastSyncedChild.current : children;
 
   useEffect(() => {
     const steadyTimer = window.setTimeout(() => setPhase("steady"), SCREEN_FADE_MS);
@@ -28,14 +34,15 @@ export function ScreenTransition({
 
   useEffect(() => {
     if (screenKey === shownKey) {
-      setShownChild(latestChild.current);
+      setPhase("steady");
       return;
     }
 
+    pendingKey.current = screenKey;
     setPhase("out");
+
     const outTimer = window.setTimeout(() => {
-      setShownKey(screenKey);
-      setShownChild(latestChild.current);
+      setShownKey(pendingKey.current);
       setPhase("in");
       window.setTimeout(() => setPhase("steady"), SCREEN_FADE_MS);
     }, SCREEN_FADE_MS);
@@ -47,7 +54,7 @@ export function ScreenTransition({
     <div
       className={`screen-transition screen-transition--${phase}${className ? ` ${className}` : ""}`}
     >
-      {shownChild}
+      {displayChild}
     </div>
   );
 }
