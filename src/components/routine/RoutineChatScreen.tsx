@@ -8,6 +8,7 @@ import type { RoutineChatMessage } from "../../types";
 interface Props {
   routineId: string;
   chatId: string;
+  variant?: "page" | "popup";
   onBack: () => void;
   onRoutineUpdated: () => void;
 }
@@ -20,6 +21,7 @@ interface DisplayMessage {
 
 export function RoutineChatScreen({
   chatId,
+  variant = "page",
   onBack,
   onRoutineUpdated,
 }: Props) {
@@ -96,7 +98,7 @@ export function RoutineChatScreen({
 
   if (loading) {
     return (
-      <div className="routine-gate">
+      <div className={variant === "popup" ? "chat-popup-loading" : "routine-gate"}>
         <div className="spinner" />
         <p>채팅 불러오는 중...</p>
       </div>
@@ -104,13 +106,15 @@ export function RoutineChatScreen({
   }
 
   return (
-    <div className="routine-chat">
-      <header className="routine-chat-header">
-        <button type="button" className="ghost-btn" onClick={onBack}>
-          ← 루틴으로
-        </button>
-        <h2>AI 건강 멘토</h2>
-      </header>
+    <div className={`routine-chat${variant === "popup" ? " routine-chat--popup" : ""}`}>
+      {variant === "page" && (
+        <header className="routine-chat-header">
+          <button type="button" className="ghost-btn" onClick={onBack}>
+            ← 루틴으로
+          </button>
+          <h2>AI 건강 멘토</h2>
+        </header>
+      )}
 
       {toast && <div className="routine-toast">{toast}</div>}
       {error && <div className="banner-error">{error}</div>}

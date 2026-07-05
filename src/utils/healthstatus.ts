@@ -1,4 +1,28 @@
-import type { Gender, HealthStatusInput } from "../types";
+import type { Gender, HealthStatus, HealthStatusInput } from "../types";
+
+export type HealthStatusFormState = {
+  gender: "" | Gender;
+  age: string;
+  height: string;
+  weight: string;
+  alcoholFreq: string;
+  smokeFreq: string;
+  exerciseFreq: string;
+};
+
+export function healthStatusToFormState(
+  status: HealthStatus,
+): HealthStatusFormState {
+  return {
+    gender: status.gender,
+    age: String(status.age),
+    height: String(status.height),
+    weight: String(status.weight),
+    alcoholFreq: String(status.alcoholFreq),
+    smokeFreq: String(status.smokeFreq),
+    exerciseFreq: String(status.exerciseFreq),
+  };
+}
 
 export function parseRequiredInt(value: string): number | undefined {
   const trimmed = value.trim();
@@ -8,15 +32,7 @@ export function parseRequiredInt(value: string): number | undefined {
   return Math.round(parsed);
 }
 
-export function buildHealthStatusRequest(form: {
-  gender: "" | Gender;
-  age: string;
-  height: string;
-  weight: string;
-  alcoholFreq: string;
-  smokeFreq: string;
-  exerciseFreq: string;
-}): HealthStatusInput | null {
+export function buildHealthStatusRequest(form: HealthStatusFormState): HealthStatusInput | null {
   if (!form.gender) return null;
 
   const age = parseRequiredInt(form.age);

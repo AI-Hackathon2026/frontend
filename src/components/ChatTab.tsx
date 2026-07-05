@@ -11,9 +11,15 @@ import type { ChatHistory, ChatSummary } from "../types";
 
 interface ChatTabProps {
   username: string;
+  variant?: "page" | "popup" | "reader";
+  contextLabel?: string;
 }
 
-export function ChatTab({ username }: ChatTabProps) {
+export function ChatTab({
+  username,
+  variant = "page",
+  contextLabel,
+}: ChatTabProps) {
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatHistory | null>(null);
@@ -228,16 +234,34 @@ export function ChatTab({ username }: ChatTabProps) {
   }
 
   if (loading) {
+    const loadingClass =
+      variant === "reader"
+        ? "document-chat-loading"
+        : variant === "popup"
+          ? "chat-popup-loading"
+          : "tab-loading";
     return (
-      <div className="tab-loading">
+      <div className={loadingClass}>
         <div className="spinner" />
-        <p>채팅 불러오는 중...</p>
+        <p>{variant === "reader" ? "Loading history…" : "채팅 불러오는 중..."}</p>
       </div>
     );
   }
 
+  const shellClass = [
+    "app-shell",
+    variant === "popup" ? "app-shell--popup" : "",
+    variant === "reader" ? "app-shell--reader" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const readerGreeting = contextLabel
+    ? `Good day. I can see you're reading “${contextLabel}”. Ask about this manual or related documents.`
+    : "Good day. I can help you browse manuals and find answers in the document library.";
+
   return (
-    <div className="app-shell">
+    <div className={shellClass}>
       <ChatSidebar
         chats={chats}
         activeChatId={activeChatId}
@@ -272,18 +296,40 @@ export function ChatTab({ username }: ChatTabProps) {
 
         {!activeChatId ? (
           <div className="welcome-panel">
-            <h2>HeAIth AI 건강 상담</h2>
-            <p>
-              AI와 대화하며 건강 관련 질문에 답변받으세요. 왼쪽에서 새
-              대화를 만들거나 기존 대화를 선택하세요.
-            </p>
-            <button
-              type="button"
-              className="primary-btn"
-              onClick={handleCreateChat}
-            >
-              새 대화 시작
-            </button>
+            {variant === "reader" ? (
+              <>
+                <div className="document-chat-greeting-card">
+                  <span className="document-chat-greeting-icon" aria-hidden>
+                    📖
+                  </span>
+                  <p>{readerGreeting}</p>
+                </div>
+                <button
+                  type="button"
+                  className="document-chat-primary-btn"
+                  onClick={handleCreateChat}
+                >
+                  Open chats menu
+                </button>
+              </>
+            ) : (
+              <>
+                <h2>HeAIth AI 건강 상담</h2>
+                <p>
+                  AI와 대화하며 건강 관련 질문에 답변받으세요.
+                  {variant === "popup"
+                    ? " 새 대화를 시작하거나 기존 대화를 선택하세요."
+                    : " 왼쪽에서 새 대화를 만들거나 기존 대화를 선택하세요."}
+                </p>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={handleCreateChat}
+                >
+                  새 대화 시작
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -305,7 +351,13 @@ export function ChatTab({ username }: ChatTabProps) {
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="메시지를 입력하세요..."
+                placeholder={
+                  variant === "reader"
+                    ? activeChatId
+                      ? "Ask about a manual or chapter…"
+                      : "Create or select a chatroom…"
+                    : "메시지를 입력하세요..."
+                }
                 rows={2}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey && !sending) {

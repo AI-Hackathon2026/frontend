@@ -1,9 +1,9 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api, saveUsername } from "../api/client";
+import { api, saveUsername, saveRole } from "../api/client";
 import { AuthForm } from "../components/AuthForm";
 import { HeAIthLogo } from "../components/HeAIthLogo";
-import { verifyIsAdmin } from "../utils/authRole";
+import { verifyIsAdmin, isAdminRole } from "../utils/authRole";
 
 export function AdminAuthPage() {
   const navigate = useNavigate();
@@ -19,12 +19,14 @@ export function AdminAuthPage() {
 
     try {
       const result = await api.signIn(email, password);
-      const isAdmin = await verifyIsAdmin();
+      const isAdmin =
+        isAdminRole(result.role) || (await verifyIsAdmin(result.role));
       if (!isAdmin) {
         await api.signOut();
         setError("관리자 권한이 없습니다.");
         return;
       }
+      saveRole("admin");
       saveUsername(result.username);
       navigate("/app", { replace: true });
     } catch (err) {

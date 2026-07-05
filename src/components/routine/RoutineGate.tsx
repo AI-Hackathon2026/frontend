@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { api, withAuthRetry } from "../../api/client";
+import { hasRoutineData } from "../../utils/routineData";
 import type { RoutineNavigate } from "./routineTypes";
 
 interface Props {
@@ -10,6 +11,17 @@ export function RoutineGate({ onNavigate }: Props) {
   useEffect(() => {
     async function route() {
       try {
+        const routine = await withAuthRetry(() => api.getRoutineMe());
+
+        if (hasRoutineData(routine)) {
+          onNavigate({
+            name: "view",
+            routineId: routine.id || "me",
+            chatId: routine.chats?.[0]?.id,
+          });
+          return;
+        }
+
         const healthRecord = await withAuthRetry(() => api.getHealthRecordMe());
 
         if (!healthRecord) {
@@ -17,18 +29,7 @@ export function RoutineGate({ onNavigate }: Props) {
           return;
         }
 
-        const routine = await withAuthRetry(() => api.getRoutineMe());
-
-        if (!routine) {
-          onNavigate({ name: "healthRecord", fromGate: true });
-          return;
-        }
-
-        onNavigate({
-          name: "view",
-          routineId: routine.id,
-          chatId: routine.chats?.[0]?.id,
-        });
+        onNavigate({ name: "healthRecord", fromGate: true });
       } catch {
         onNavigate({ name: "healthStatus" });
       }

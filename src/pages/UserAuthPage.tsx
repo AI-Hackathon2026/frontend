@@ -4,7 +4,7 @@ import { api, saveUsername } from "../api/client";
 import { AuthForm } from "../components/AuthForm";
 import { HeAIthLogo } from "../components/HeAIthLogo";
 import { SignupSuccessScreen } from "../components/SignupSuccessScreen";
-import { verifyIsAdmin } from "../utils/authRole";
+import { verifyIsAdmin, isAdminRole } from "../utils/authRole";
 
 export function UserAuthPage() {
   const navigate = useNavigate();
@@ -38,7 +38,8 @@ export function UserAuthPage() {
     try {
       if (mode === "signin") {
         const result = await api.signIn(email, password);
-        const isAdmin = await verifyIsAdmin();
+        const isAdmin =
+          isAdminRole(result.role) || (await verifyIsAdmin(result.role));
         if (isAdmin) {
           await api.signOut();
           setError("관리자 계정입니다. 관리자 로그인을 이용해 주세요.");

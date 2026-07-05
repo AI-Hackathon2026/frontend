@@ -1,66 +1,28 @@
 import type { ReactNode } from "react";
-import type { AppTab } from "../types";
 import { HeAIthLogo } from "./HeAIthLogo";
 
 interface MainLayoutProps {
   username: string;
-  activeTab: AppTab;
   isAdmin: boolean;
-  onTabChange: (tab: AppTab) => void;
   onSignOut: () => void;
   children: ReactNode;
 }
 
 export function MainLayout({
   username,
-  activeTab,
   isAdmin,
-  onTabChange,
   onSignOut,
   children,
 }: MainLayoutProps) {
   return (
     <div className="main-layout">
-      <header className="main-header">
+      <header className="main-header main-header--minimal">
         <div className="main-brand">
           <HeAIthLogo size="sm" />
-        </div>
-
-        <nav className="main-tabs" aria-label="주요 메뉴">
-          {!isAdmin && (
-            <>
-              <button
-                type="button"
-                className={activeTab === "chat" ? "active" : ""}
-                onClick={() => onTabChange("chat")}
-              >
-                AI 챗봇
-              </button>
-              <button
-                type="button"
-                className={activeTab === "knhanes" ? "active" : ""}
-                onClick={() => onTabChange("knhanes")}
-              >
-                KNHANES 건강통계
-              </button>
-              <button
-                type="button"
-                className={activeTab === "routine" ? "active" : ""}
-                onClick={() => onTabChange("routine")}
-              >
-                루틴
-              </button>
-            </>
-          )}
           {isAdmin && (
-            <button
-              type="button"
-              className="admin-tab-btn active"
-            >
-              📁 파일 관리
-            </button>
+            <span className="main-brand-tagline">Admin Console</span>
           )}
-        </nav>
+        </div>
 
         <div className="main-user">
           <span className="user-avatar">{username.charAt(0).toUpperCase()}</span>
@@ -72,7 +34,7 @@ export function MainLayout({
         </div>
       </header>
 
-      <div className="main-content">{children}</div>
+      <div className="main-content main-content--routine">{children}</div>
     </div>
   );
 }

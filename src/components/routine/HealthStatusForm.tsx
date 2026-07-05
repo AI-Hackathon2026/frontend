@@ -1,10 +1,14 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { api, withAuthRetry } from "../../api/client";
 import type { Gender } from "../../types";
-import { buildHealthStatusRequest } from "../../utils/healthstatus";
+import {
+  buildHealthStatusRequest,
+  healthStatusToFormState,
+  type HealthStatusFormState,
+} from "../../utils/healthstatus";
 
-const INITIAL_FORM = {
-  gender: "" as "" | Gender,
+const INITIAL_FORM: HealthStatusFormState = {
+  gender: "",
   age: "",
   height: "",
   weight: "",
@@ -14,17 +18,50 @@ const INITIAL_FORM = {
 };
 
 interface Props {
+  mode?: "create" | "update";
   onComplete: () => void;
+  onCancel?: () => void;
 }
 
-export function HealthStatusForm({ onComplete }: Props) {
-  const [form, setForm] = useState(INITIAL_FORM);
+export function HealthStatusForm({
+  mode = "create",
+  onComplete,
+  onCancel,
+}: Props) {
+  const [form, setForm] = useState<HealthStatusFormState>(INITIAL_FORM);
+  const [healthStatusId, setHealthStatusId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(mode === "update");
 
-  function updateField<K extends keyof typeof form>(
+  useEffect(() => {
+    if (mode !== "update") return;
+
+    setFetching(true);
+    setError("");
+
+    withAuthRetry(() => api.getHealthStatus())
+      .then((status) => {
+        if (!status) {
+          setError("저장된 건강 정보를 찾을 수 없습니다.");
+          return;
+        }
+        setHealthStatusId(status.id);
+        setForm(healthStatusToFormState(status));
+      })
+      .catch((err) => {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "건강 정보를 불러올 수 없습니다.",
+        );
+      })
+      .finally(() => setFetching(false));
+  }, [mode]);
+
+  function updateField<K extends keyof HealthStatusFormState>(
     key: K,
-    value: (typeof form)[K],
+    value: HealthStatusFormState[K],
   ) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -46,9 +83,18 @@ export function HealthStatusForm({ onComplete }: Props) {
       return;
     }
 
+    if (mode === "update" && !healthStatusId) {
+      setError("건강 정보 ID를 찾을 수 없습니다. 다시 시도해 주세요.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await withAuthRetry(() => api.submitHealthStatus(body));
+      if (mode === "update" && healthStatusId) {
+        await withAuthRetry(() => api.updateHealthStatus(healthStatusId, body));
+      } else {
+        await withAuthRetry(() => api.submitHealthStatus(body));
+      }
       onComplete();
     } catch (err) {
       setError(
@@ -59,12 +105,32 @@ export function HealthStatusForm({ onComplete }: Props) {
     }
   }
 
+  if (fetching) {
+    return (
+      <div className="routine-page">
+        <div className="routine-gate">
+          <div className="spinner" />
+          <p>건강 정보 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="routine-page">
       <section className="routine-section">
-        <h2>건강 정보 입력</h2>
+        <div className="routine-section-header">
+          <h2>{mode === "update" ? "건강 정보 수정" : "건강 정보 입력"}</h2>
+          {mode === "update" && onCancel && (
+            <button type="button" className="ghost-btn" onClick={onCancel}>
+              취소
+            </button>
+          )}
+        </div>
         <p className="section-desc">
-          KNHANES 기반 맞춤 루틴을 위해 건강 정보를 입력해 주세요.
+          {mode === "update"
+            ? "건강 정보를 수정하면 건강 점수와 루틴 추천이 다시 계산됩니다."
+            : "KNHANES 기반 맞춤 루틴을 위해 건강 정보를 입력해 주세요."}
         </p>
 
         {error && <div className="banner-error">{error}</div>}
@@ -177,9 +243,15 @@ export function HealthStatusForm({ onComplete }: Props) {
             </div>
           </fieldset>
 
-          <button type="submit" className="primary-btn" disabled={loading}>
-            {loading ? "저장 중..." : "저장하고 계속하기"}
-          </button>
+          <div className="healthstatus-form-actions">
+            <button type="submit" className="primary-btn" disabled={loading}>
+              {loading
+                ? "저장 중..."
+                : mode === "update"
+                  ? "건강 정보 업데이트"
+                  : "저장하고 계속하기"}
+            </button>
+          </div>
         </form>
       </section>
     </div>

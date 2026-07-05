@@ -51,7 +51,7 @@ export function SignupSuccessScreen({ email, onSignIn }: SignupSuccessScreenProp
 
       <div className="signup-success__actions">
         <button type="button" className="primary-btn" onClick={onSignIn}>
-          로그인하러 가기
+          로그인하기
         </button>
         <Link to="/" className="ghost-btn signup-success__home">
           홈으로

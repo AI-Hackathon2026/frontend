@@ -102,6 +102,10 @@ export interface HealthStatusInput {
   exerciseFreq: number;
 }
 
+export interface HealthStatus extends HealthStatusInput {
+  id: string;
+}
+
 export interface ExposureRates {
   OBESITY?: number;
   HYPERTENSION?: number;
@@ -111,10 +115,48 @@ export interface ExposureRates {
   STRESS?: number;
 }
 
+export type HealthRankingSource = "peers" | "estimated";
+
+export interface HealthRanking {
+  percentile: number;
+  rank: number;
+  cohortSize: number;
+  ageGroup: string;
+  gender: Gender;
+  source: HealthRankingSource;
+}
+
+export interface HealthRecordFormattedScore {
+  value: number;
+  display: string;
+  label: string;
+  progressPercent: number;
+}
+
+export interface HealthRecordFormattedRanking {
+  title: string;
+  cohortLabel: string;
+  percentileDisplay: string;
+  topDisplay: string;
+  rankDisplay: string;
+  sourceNote: string;
+  percentileLabel?: string;
+}
+
+export interface HealthRecordFormatted {
+  overallScore: HealthRecordFormattedScore;
+  healthRanking?: HealthRecordFormattedRanking;
+  exposureRisks?: {
+    items?: { disease: string; rate: number }[];
+  };
+}
+
 export interface HealthRecord {
   bmi: number;
   overallScore: number;
   exposureRates: ExposureRates;
+  healthRanking?: HealthRanking;
+  formatted?: HealthRecordFormatted;
 }
 
 export interface RoutineProjection {
@@ -134,13 +176,48 @@ export interface RoutineChatSummary {
   id: string;
 }
 
+export type MealType = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
+
+export interface ExerciseRoutineItem {
+  planId: string;
+  task: string;
+  frequency: string;
+  isCompleted: boolean;
+  progressionBar: number;
+  dayOfWeek?: string;
+  dayNumber?: number;
+}
+
+export interface NutritionMeal {
+  planId: string;
+  mealType: MealType;
+  foods: string[];
+  calories: number;
+  isCompleted: boolean;
+  progressionBar: number;
+}
+
+export interface NutritionRoutineDay {
+  planId?: string;
+  dayOfWeek?: string;
+  dayNumber?: number;
+  meals: NutritionMeal[];
+}
+
 export interface Routine {
   id: string;
   difficulty: RoutineDifficulty;
+  /** One-sentence routine description (preferred headline). */
+  summary: string;
+  /** Markdown README: reasoning, risk reduction, references. */
+  reportReadme: string;
   title: string;
   nutritionPlan: string;
   workoutPlan: string;
   isActive: boolean;
+  exerciseRoutine?: ExerciseRoutineItem[];
+  nutritionRoutine?: NutritionRoutineDay[];
+  trackerCompleted?: boolean;
   logs?: RoutineLog[];
   chats?: RoutineChatSummary[];
 }

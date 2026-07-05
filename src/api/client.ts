@@ -5,6 +5,11 @@ import type {
   EmbeddingInfo,
   GenerateRoutineResult,
   HealthRecord,
+  HealthRecordFormatted,
+  HealthRecordFormattedRanking,
+  HealthRecordFormattedScore,
+  HealthRanking,
+  HealthStatus,
   HealthStatusInput,
   KnhanesFilesResponse,
   KnhanesGroundResponse,
@@ -12,7 +17,6 @@ import type {
   KnhanesQueryResponse,
   PdfFile,
   RagDocument,
-  Routine,
   RoutineChatMessage,
   RoutineChatResponse,
   RoutineDifficulty,
@@ -20,6 +24,7 @@ import type {
   RoutineProjection,
 } from "../types";
 import type { DiseaseKey } from "../constants/routine";
+import { parseRoutineMeResponse } from "../utils/routineNormalize";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 const USERNAME_KEY = "competition_username";
@@ -109,32 +114,171 @@ async function request<T>(
   return data as T;
 }
 
+function normalizeHealthRanking(raw: unknown): HealthRanking | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const data = raw as Record<string, unknown>;
+  const gender =
+    data.gender === "MALE" || data.gender === "FEMALE" ? data.gender : undefined;
+  if (!gender) return undefined;
+
+  const percentile = Number(data.percentile);
+  const rank = Number(data.rank);
+  const cohortSize = Number(data.cohortSize);
+  if (
+    Number.isNaN(percentile) ||
+    Number.isNaN(rank) ||
+    Number.isNaN(cohortSize)
+  ) {
+    return undefined;
+  }
+
+  const source: HealthRanking["source"] =
+    data.source === "peers" || data.source === "estimated"
+      ? data.source
+      : "estimated";
+
+  return {
+    percentile,
+    rank,
+    cohortSize,
+    ageGroup: String(data.ageGroup ?? ""),
+    gender,
+    source,
+  };
+}
+
+function normalizeHealthRecordFormattedRanking(
+  raw: unknown,
+): HealthRecordFormattedRanking | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const data = raw as Record<string, unknown>;
+  if (!data.topDisplay && !data.percentileDisplay && !data.rankDisplay) {
+    return undefined;
+  }
+
+  return {
+    title: String(data.title ?? "건강 순위"),
+    cohortLabel: String(data.cohortLabel ?? ""),
+    percentileDisplay: String(data.percentileDisplay ?? ""),
+    topDisplay: String(data.topDisplay ?? ""),
+    rankDisplay: String(data.rankDisplay ?? ""),
+    sourceNote: String(data.sourceNote ?? ""),
+    percentileLabel:
+      data.percentileLabel != null ? String(data.percentileLabel) : undefined,
+  };
+}
+
+function normalizeHealthRecordFormatted(
+  raw: unknown,
+): HealthRecordFormatted | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const data = raw as Record<string, unknown>;
+  const overallScoreRaw = data.overallScore;
+  if (!overallScoreRaw || typeof overallScoreRaw !== "object") return undefined;
+
+  const score = overallScoreRaw as Record<string, unknown>;
+  const overallScore: HealthRecordFormattedScore = {
+    value: Number(score.value ?? 0),
+    display: String(score.display ?? score.value ?? "0"),
+    label: String(score.label ?? "종합 건강 점수"),
+    progressPercent: Number(score.progressPercent ?? score.value ?? 0),
+  };
+
+  const healthRanking = normalizeHealthRecordFormattedRanking(data.healthRanking);
+  const exposureRisks = data.exposureRisks as
+    | HealthRecordFormatted["exposureRisks"]
+    | undefined;
+
+  return {
+    overallScore,
+    healthRanking,
+    exposureRisks,
+  };
+}
+
 function normalizeHealthRecord(raw: unknown): HealthRecord | null {
   if (!raw || typeof raw !== "object") return null;
   const record = raw as Record<string, unknown>;
+  const formatted = normalizeHealthRecordFormatted(record.formatted);
+  const healthRanking = normalizeHealthRanking(record.healthRanking);
 
-  if (typeof record.overallScore === "number" && record.exposureRates) {
-    return record as unknown as HealthRecord;
+  const riskItems = formatted?.exposureRisks?.items ?? [];
+  const exposureRates: HealthRecord["exposureRates"] = {};
+
+  if (riskItems.length > 0) {
+    for (const item of riskItems) {
+      exposureRates[item.disease as keyof HealthRecord["exposureRates"]] =
+        item.rate;
+    }
+  } else if (record.exposureRates && typeof record.exposureRates === "object") {
+    Object.assign(
+      exposureRates,
+      record.exposureRates as HealthRecord["exposureRates"],
+    );
   }
 
-  const formatted = record.formatted as Record<string, unknown> | undefined;
-  const scoreBlock = formatted?.overallScore as { value?: number } | undefined;
-  const riskItems =
-    (formatted?.exposureRisks as { items?: { disease: string; rate: number }[] })
-      ?.items ?? [];
+  const overallScore = Number(
+    formatted?.overallScore.value ??
+      record.overallScore ??
+      0,
+  );
 
-  const exposureRates: HealthRecord["exposureRates"] = {};
-  for (const item of riskItems) {
-    exposureRates[item.disease as keyof HealthRecord["exposureRates"]] = item.rate;
+  if (
+    overallScore === 0 &&
+    Object.keys(exposureRates).length === 0 &&
+    !formatted &&
+    !healthRanking
+  ) {
+    return null;
   }
 
   return {
     bmi: Number(record.bmi ?? 0),
-    overallScore: Number(scoreBlock?.value ?? record.overallScore ?? 0),
-    exposureRates:
-      Object.keys(exposureRates).length > 0
-        ? exposureRates
-        : (record.exposureRates as HealthRecord["exposureRates"]) ?? {},
+    overallScore,
+    exposureRates,
+    healthRanking,
+    formatted,
+  };
+}
+
+function normalizeHealthStatus(raw: unknown): HealthStatus | null {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as Record<string, unknown>;
+
+  const id = data.id != null ? String(data.id) : "";
+  if (!id) return null;
+
+  const gender =
+    data.gender === "MALE" || data.gender === "FEMALE" ? data.gender : null;
+  if (!gender) return null;
+
+  const age = Number(data.age);
+  const height = Number(data.height);
+  const weight = Number(data.weight);
+  const alcoholFreq = Number(data.alcoholFreq ?? data.alcohol_freq);
+  const smokeFreq = Number(data.smokeFreq ?? data.smoke_freq);
+  const exerciseFreq = Number(data.exerciseFreq ?? data.exercise_freq);
+
+  if (
+    Number.isNaN(age) ||
+    Number.isNaN(height) ||
+    Number.isNaN(weight) ||
+    Number.isNaN(alcoholFreq) ||
+    Number.isNaN(smokeFreq) ||
+    Number.isNaN(exerciseFreq)
+  ) {
+    return null;
+  }
+
+  return {
+    id,
+    gender,
+    age,
+    height,
+    weight,
+    alcoholFreq,
+    smokeFreq,
+    exerciseFreq,
   };
 }
 
@@ -163,6 +307,81 @@ function normalizeProjection(raw: unknown): RoutineProjection {
   }
 
   return result;
+}
+
+function normalizeGenerateOrReplaceResult(raw: unknown): GenerateRoutineResult {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("루틴 응답을 해석할 수 없습니다.");
+  }
+
+  const data = raw as Record<string, unknown>;
+  const routineId = data.routineId ?? data.id ?? data.routine_id;
+  const chatsRaw = data.chats;
+  const chatFromList =
+    Array.isArray(chatsRaw) &&
+    chatsRaw[0] &&
+    typeof chatsRaw[0] === "object"
+      ? String((chatsRaw[0] as Record<string, unknown>).id ?? "")
+      : "";
+  const chatIdRaw = data.chatId ?? data.chat_id ?? chatFromList;
+  const chatId =
+    chatIdRaw != null && String(chatIdRaw).length > 0
+      ? String(chatIdRaw)
+      : undefined;
+
+  if (routineId != null && chatId != null && String(chatId).length > 0) {
+    return {
+      routineId: String(routineId),
+      chatId: String(chatId),
+    };
+  }
+
+  if (routineId != null) {
+    const nestedRoutine = data.routine;
+    if (nestedRoutine && typeof nestedRoutine === "object") {
+      const parsed = parseRoutineMeResponse(nestedRoutine);
+      if (parsed) {
+        return {
+          routineId: String(routineId),
+          chatId: parsed.chats?.[0]?.id ?? String(chatId ?? ""),
+        };
+      }
+    }
+
+    const parsed = parseRoutineMeResponse(raw);
+    if (parsed) {
+      return {
+        routineId: String(routineId),
+        chatId: parsed.chats?.[0]?.id ?? String(chatId ?? ""),
+      };
+    }
+
+    return {
+      routineId: String(routineId),
+      chatId: String(chatId ?? ""),
+    };
+  }
+
+  const nestedRoutine = data.routine;
+  if (nestedRoutine && typeof nestedRoutine === "object") {
+    const parsed = parseRoutineMeResponse(nestedRoutine);
+    if (parsed) {
+      return {
+        routineId: parsed.id || "me",
+        chatId: parsed.chats?.[0]?.id ?? "",
+      };
+    }
+  }
+
+  const parsed = parseRoutineMeResponse(raw);
+  if (parsed) {
+    return {
+      routineId: parsed.id || "me",
+      chatId: parsed.chats?.[0]?.id ?? "",
+    };
+  }
+
+  throw new Error("루틴 응답을 해석할 수 없습니다.");
 }
 
 function normalizeRoutineLog(raw: unknown): RoutineLog {
@@ -205,10 +424,19 @@ async function requestOptional<T>(path: string): Promise<T | null> {
 
 export const api = {
   signIn(email: string, password: string) {
-    return request<{ message: string; username: string }>("/auth/signin", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    });
+    return request<{ message: string; username: string; role?: string }>(
+      "/auth/signin",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      },
+    ).then((data) => ({
+      ...data,
+      role:
+        data.role ??
+        (data as { userRole?: string }).userRole ??
+        (data as { authorities?: string[] }).authorities?.[0],
+    }));
   },
 
   signUp(email: string, username: string, password: string) {
@@ -348,6 +576,22 @@ export const api = {
     });
   },
 
+  getHealthStatus() {
+    return request<unknown>("/healthstatus").then((raw) => {
+      if (Array.isArray(raw)) {
+        return normalizeHealthStatus(raw[0]);
+      }
+      return normalizeHealthStatus(raw);
+    });
+  },
+
+  updateHealthStatus(id: string, body: HealthStatusInput) {
+    return request<unknown>(`/healthstatus/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((raw) => normalizeHealthRecord(raw));
+  },
+
   getHealthRecordMe() {
     return requestOptional<unknown>("/health-records/me").then((raw) =>
       normalizeHealthRecord(raw),
@@ -361,14 +605,60 @@ export const api = {
   },
 
   getRoutineMe() {
-    return requestOptional<Routine>("/routines/me");
+    return requestOptional<unknown>("/routines/me").then((raw) =>
+      parseRoutineMeResponse(raw),
+    );
   },
 
   generateRoutinePlan(body: { difficulty: RoutineDifficulty }) {
-    return request<GenerateRoutineResult>("/routines/generate", {
+    return request<unknown>("/routines/generate", {
       method: "POST",
       body: JSON.stringify(body),
+    }).then((raw) => normalizeGenerateOrReplaceResult(raw));
+  },
+
+  replaceRoutineMe(body: { difficulty: RoutineDifficulty }) {
+    return request<unknown>("/routines/me", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }).then((raw) => normalizeGenerateOrReplaceResult(raw));
+  },
+
+  deleteRoutineMe() {
+    return request<void>("/routines/me", {
+      method: "DELETE",
     });
+  },
+
+  updateExercisePlanProgress(planId: string, isCompleted: boolean) {
+    return request<unknown>(`/routines/exercise-plans/${planId}/progress`, {
+      method: "PATCH",
+      body: JSON.stringify({ isCompleted }),
+    });
+  },
+
+  updateNutritionPlanProgress(planId: string, isCompleted: boolean) {
+    return request<unknown>(`/routines/nutrition-plans/${planId}/progress`, {
+      method: "PATCH",
+      body: JSON.stringify({ isCompleted }),
+    });
+  },
+
+  async getChronicDiseaseProjections(diseases: DiseaseKey[]) {
+    const entries = await Promise.all(
+      diseases.map(async (disease) => {
+        try {
+          const projection = await this.getHealthRecordProjection(disease);
+          return [disease, projection] as const;
+        } catch {
+          return [disease, null] as const;
+        }
+      }),
+    );
+    return Object.fromEntries(entries) as Record<
+      DiseaseKey,
+      RoutineProjection | null
+    >;
   },
 
   deactivateRoutine(routineId: string) {

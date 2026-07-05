@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
+import { PdfViewerPageLoading } from "./PdfViewerPageLoading";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -183,6 +184,11 @@ export function PdfBookViewer({ fileId, filename, onClose }: PdfBookViewerProps)
       ? `${leftPage}–${rightPage} / ${numPages}`
       : `${leftPage} / ${numPages}`;
 
+  const downloadProgress =
+    loadProgress.total > 0
+      ? Math.round((loadProgress.loaded / loadProgress.total) * 88)
+      : null;
+
   return (
     <div className="bv-shell">
       {/* Header */}
@@ -198,16 +204,16 @@ export function PdfBookViewer({ fileId, filename, onClose }: PdfBookViewerProps)
 
       {/* Book viewport */}
       <div className="bv-viewport" ref={viewportRef}>
-        {/* Fetch loading */}
         {fetchState === "loading" && (
-          <div className="bv-center-msg">
-            <div className="spinner" />
-            <span>PDF 주소 불러오는 중…</span>
-          </div>
+          <PdfViewerPageLoading
+            filename={filename}
+            fileDetailsReady
+            progress={null}
+          />
         )}
 
         {fetchState === "error" && (
-          <div className="bv-center-msg">
+          <div className="bv-center-msg bv-center-msg--error">
             <p>PDF를 불러올 수 없습니다.</p>
             {fetchError && <code className="pdf-error-detail">{fetchError}</code>}
             <button className="primary-btn" style={{ marginTop: "1rem" }} onClick={loadPresignedUrl}>
@@ -218,20 +224,19 @@ export function PdfBookViewer({ fileId, filename, onClose }: PdfBookViewerProps)
 
         {fetchState === "ready" && presignedUrl && (
           <Document
+            key={presignedUrl}
             file={presignedUrl}
             onLoadProgress={({ loaded, total }) =>
               setLoadProgress({ loaded, total: total ?? 0 })
             }
             onLoadSuccess={({ numPages: n }) => setNumPages(n)}
             loading={
-              <div className="bv-center-msg">
-                <div className="spinner" />
-                <span>
-                  {loadProgress.total > 0
-                    ? `${Math.round((loadProgress.loaded / loadProgress.total) * 100)}%`
-                    : "PDF 렌더링 중…"}
-                </span>
-              </div>
+              <PdfViewerPageLoading
+                filename={filename}
+                fileDetailsReady
+                pdfStreamReady
+                progress={downloadProgress}
+              />
             }
             error={
               <div className="bv-center-msg">

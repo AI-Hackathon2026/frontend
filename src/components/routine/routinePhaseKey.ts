@@ -5,13 +5,15 @@ export function routinePhaseKey(phase: RoutinePhase): string {
     case "gate":
       return "gate";
     case "healthStatus":
-      return "healthStatus";
+      return phase.mode === "update" ? "healthStatus-update" : "healthStatus";
     case "healthRecord":
       return phase.fromGate
-        ? "healthRecord-gate"
-        : `healthRecord-${phase.returnRoutineId ?? "back"}`;
+        ? `healthRecord-gate-${phase.refreshKey ?? 0}`
+        : `healthRecord-${phase.returnRoutineId ?? "back"}-${phase.refreshKey ?? 0}`;
     case "difficulty":
-      return "difficulty";
+      return phase.mode === "change"
+        ? `difficulty-change-${phase.routineId ?? "me"}`
+        : "difficulty";
     case "view":
       return `view-${phase.routineId}-${phase.refreshKey ?? 0}`;
     case "chat":

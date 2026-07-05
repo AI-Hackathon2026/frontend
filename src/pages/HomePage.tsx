@@ -120,8 +120,8 @@ export function HomePage() {
               </h1>
               <p className="landing-tagline">AI가 만드는 건강의 미래</p>
               <p className="landing-desc">
-                HeAIth는 AI 기반 건강 상담과 KNHANES 국민건강영양조사 데이터를
-                결합하여, 개인 맞춤형 건강 인사이트를 제공합니다.
+                HeAIth는 KNHANES 국민건강영양조사 데이터를 <br />
+                기반으로 AI 기반 건강 상담과 개인 맞춤형 건강 루틴을 제공합니다.
               </p>
               <div className="landing-hero-actions">
                 <Link to="/login" className="primary-btn landing-cta-primary">
@@ -136,7 +136,7 @@ export function HomePage() {
                 </button>
               </div>
             </div>
-            <div className="landing-hero-visual" aria-hidden="true">
+            <div className="landing-hero-visual" aria-hidden>
               <div className="landing-hero-ripples">
                 <span className="landing-hero-ripple" />
                 <span className="landing-hero-ripple" />
