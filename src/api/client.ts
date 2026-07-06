@@ -26,7 +26,8 @@ import type {
 import type { DiseaseKey } from "../constants/routine";
 import { parseRoutineMeResponse } from "../utils/routineNormalize";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "";
+import { apiUrl } from "./baseUrl";
+
 const USERNAME_KEY = "competition_username";
 const ROLE_KEY = "competition_role";
 
@@ -79,6 +80,8 @@ export function clearRole() {
   sessionStorage.removeItem(ROLE_KEY);
 }
 
+export { BASE_URL, apiUrl } from "./baseUrl";
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -92,7 +95,7 @@ async function request<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(apiUrl(path), {
     ...options,
     headers,
     credentials: "include",
@@ -402,7 +405,7 @@ function normalizeRoutineLog(raw: unknown): RoutineLog {
 }
 
 async function requestOptional<T>(path: string): Promise<T | null> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(apiUrl(path), {
     credentials: "include",
   });
 

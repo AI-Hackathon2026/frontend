@@ -3,6 +3,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import { PdfViewerPageLoading } from "./PdfViewerPageLoading";
+import { apiUrl } from "../api/baseUrl";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -41,7 +42,7 @@ export function PdfBookViewer({ fileId, filename, onClose }: PdfBookViewerProps)
     setFetchState("loading");
     setPresignedUrl(null);
     setFetchError("");
-    fetch(`/files/download/${fileId}`, { credentials: "include" })
+    fetch(apiUrl(`/files/download/${fileId}`), { credentials: "include" })
       .then(async (r) => {
         if (!r.ok) {
           const t = await r.text().catch(() => "");
