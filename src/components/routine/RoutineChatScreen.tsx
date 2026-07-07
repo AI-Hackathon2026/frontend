@@ -1,15 +1,14 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { STARTER_PROMPTS } from "../../constants/routine";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRoutineChat } from "../../hooks/useRoutineChat";
 import type { UpdatedRoutine } from "../../types/routine-chat.types";
 import {
   RoutineChatTypingIndicator,
   RoutineMessageBubble,
 } from "../chat/RoutineMessageBubble";
+import { RoutineChatStarterMarquee } from "./RoutineChatStarterMarquee";
 
 interface Props {
   chatId: string | null;
-  routineSummary?: string;
   variant?: "page" | "popup";
   onClose: () => void;
   onRoutineUpdate: (routine: UpdatedRoutine) => void;
@@ -18,7 +17,6 @@ interface Props {
 
 export function RoutineChatScreen({
   chatId,
-  routineSummary = "",
   variant = "page",
   onClose,
   onRoutineUpdate,
@@ -28,7 +26,19 @@ export function RoutineChatScreen({
   const [toast, setToast] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const { messages, loading, sending, error, sendMessage } = useRoutineChat({
+  const scrollToBottom = useCallback(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const {
+    messages,
+    loading,
+    sending,
+    streamingMessageId,
+    error,
+    sendMessage,
+    completeStreaming,
+  } = useRoutineChat({
     chatId,
     onRoutineUpdate: (routine) => {
       onRoutineUpdate(routine);
@@ -39,8 +49,8 @@ export function RoutineChatScreen({
   });
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, sending]);
+    scrollToBottom();
+  }, [messages, sending, scrollToBottom]);
 
   async function onSend(event?: FormEvent) {
     event?.preventDefault();
@@ -53,7 +63,7 @@ export function RoutineChatScreen({
 
   return (
     <div className={`routine-chat${variant === "popup" ? " routine-chat--popup" : ""}`}>
-      {variant === "page" ? (
+      {variant === "page" && (
         <header className="routine-chat-header routine-chat-header--v2">
           <button
             type="button"
@@ -65,15 +75,8 @@ export function RoutineChatScreen({
           </button>
           <div className="routine-chat-header-copy">
             <p className="routine-chat-header-title">AI 루틴 상담</p>
-            {routineSummary && (
-              <p className="routine-chat-header-subtitle">{routineSummary}</p>
-            )}
           </div>
         </header>
-      ) : (
-        routineSummary && (
-          <p className="routine-chat-popup-summary">{routineSummary}</p>
-        )
       )}
 
       {toast && <div className="routine-toast">{toast}</div>}
@@ -89,45 +92,29 @@ export function RoutineChatScreen({
             <p className="routine-chat-empty">
               루틴에 대해 무엇이든 물어보세요
             </p>
-            <div className="routine-chat-starters routine-chat-starters--center">
-              {STARTER_PROMPTS.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  className="routine-starter-chip"
-                  disabled={sending}
-                  onClick={() => void sendMessage(prompt)}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
           </div>
         )}
 
         {messages.map((message) => (
-          <RoutineMessageBubble key={message.id} message={message} />
+          <RoutineMessageBubble
+            key={message.id}
+            message={message}
+            isStreaming={message.id === streamingMessageId}
+            onStreamComplete={completeStreaming}
+            onStreamProgress={scrollToBottom}
+          />
         ))}
 
-        {sending && <RoutineChatTypingIndicator />}
+        {sending && !streamingMessageId && <RoutineChatTypingIndicator />}
 
         <div ref={bottomRef} />
       </div>
 
-      {messages.length > 0 && (
-        <div className="routine-chat-starters">
-          {STARTER_PROMPTS.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              className="routine-starter-chip"
-              disabled={sending}
-              onClick={() => void sendMessage(prompt)}
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
+      {!loading && (
+        <RoutineChatStarterMarquee
+          disabled={sending || streamingMessageId !== null}
+          onSelect={sendMessage}
+        />
       )}
 
       <form className="routine-chat-composer routine-chat-composer--v2" onSubmit={(e) => void onSend(e)}>
@@ -142,12 +129,17 @@ export function RoutineChatScreen({
           }}
           placeholder="루틴에 대해 물어보거나 조정을 요청하세요..."
           rows={1}
-          disabled={sending || loading}
+          disabled={sending || loading || streamingMessageId !== null}
         />
         <button
           type="submit"
           className="routine-chat-send-btn"
-          disabled={sending || loading || !inputText.trim()}
+          disabled={
+            sending ||
+            loading ||
+            streamingMessageId !== null ||
+            !inputText.trim()
+          }
           aria-label="전송"
         >
           ↑

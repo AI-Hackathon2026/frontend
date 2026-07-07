@@ -11,12 +11,11 @@ import {
 import { mergeRoutinePreservingPlanOrder } from "../../utils/routinePlanOrder";
 import { applyUpdatedRoutine } from "../../utils/routineChatUpdate";
 import {
-  daysUntilRoutineRefresh,
   getRoutineWeekAnchor,
   isRoutineWeekExpired,
   resetRoutineWeekAnchor,
-  simulateWeekElapsedForTest,
 } from "../../utils/routineWeek";
+import { RoutineRefreshCountdown } from "./view/RoutineRefreshCountdown";
 import { LevelUpModal } from "../avatar/LevelUpModal";
 import { ExerciseRoutineTracker } from "./ExerciseRoutineTracker";
 import { NutritionRoutineTracker } from "./NutritionRoutineTracker";
@@ -246,7 +245,7 @@ export function RoutineViewScreen({
     setError("");
     try {
       const result = await withAuthRetry(() =>
-        api.updateNutritionPlanProgress(planId, !isCompleted),
+        api.updateNutritionFoodItemProgress(planId, !isCompleted),
       );
       await refreshRoutineAfterTaskUpdate(isCompleted, result);
     } catch (err) {
@@ -364,20 +363,7 @@ export function RoutineViewScreen({
         )}
       </div>
 
-      <p className="routine-v2-week-note">
-        다음 루틴 갱신까지 {daysUntilRoutineRefresh(routine.id)}일
-        <button
-          type="button"
-          className="routine-week-test-btn"
-          disabled={weekOverlayPhase !== "hidden" || actionLoading}
-          onClick={() => {
-            simulateWeekElapsedForTest(routine.id);
-            void refreshRoutineForNewWeek(routine);
-          }}
-        >
-          [테스트] 1주 경과
-        </button>
-      </p>
+      <RoutineRefreshCountdown routineId={routine.id} />
 
       <div className="routine-v2-actions">
         <button
@@ -408,8 +394,6 @@ export function RoutineViewScreen({
 
       <RoutineChatFabPopup
         chatId={activeChatId ?? null}
-        routineSummary={summaryText}
-        avatarLevel={avatar.level}
         onChatIdResolved={setResolvedChatId}
         onRoutineUpdate={(updated) => {
           setRoutine((prev) => (prev ? applyUpdatedRoutine(prev, updated) : prev));

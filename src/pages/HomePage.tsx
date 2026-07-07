@@ -120,8 +120,8 @@ export function HomePage() {
               </h1>
               <p className="landing-tagline">AI가 만드는 건강의 미래</p>
               <p className="landing-desc">
-                HeAIth는 KNHANES 국민건강영양조사 데이터를 <br />
-                기반으로 AI 기반 건강 상담과 개인 맞춤형 건강 루틴을 제공합니다.
+                HeAIth는 국민건강통계 데이터를 기반으로 <br />
+                개인 맞춤형 건강 루틴과 AI 상담을 제공합니다.
               </p>
               <div className="landing-hero-actions">
                 <Link to="/login" className="primary-btn landing-cta-primary">

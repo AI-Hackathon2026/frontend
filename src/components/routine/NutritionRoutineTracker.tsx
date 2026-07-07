@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { MEAL_TYPE_ORDER } from "../../constants/routine";
 import type { MealType, NutritionMeal, NutritionRoutineDay } from "../../types";
-import { getCurrentMealType } from "../../utils/nutritionSummary";
 import { DayNavigation } from "./view/DayNavigation";
 import { MealSection } from "./view/MealSection";
 import { NutritionSummaryCard } from "./view/NutritionSummaryCard";
@@ -27,16 +26,6 @@ function groupMealsByType(meals: NutritionMeal[]) {
   }));
 }
 
-function defaultExpandedMealKey(
-  dayNumber: number,
-  mealGroups: { mealType: MealType }[],
-): string | null {
-  const currentMeal = getCurrentMealType();
-  if (!currentMeal) return null;
-  if (!mealGroups.some((group) => group.mealType === currentMeal)) return null;
-  return `${dayNumber}-${currentMeal}`;
-}
-
 export function NutritionRoutineTracker({
   days,
   updatingPlanId = null,
@@ -51,14 +40,6 @@ export function NutritionRoutineTracker({
     () => groupMealsByType(day?.meals ?? []),
     [day?.meals],
   );
-
-  const [expandedMeal, setExpandedMeal] = useState<string | null>(() =>
-    defaultExpandedMealKey(dayNumber, mealGroups),
-  );
-
-  useEffect(() => {
-    setExpandedMeal(defaultExpandedMealKey(dayNumber, mealGroups));
-  }, [dayNumber, mealGroups]);
 
   const totalMeals = days.reduce((sum, d) => sum + d.meals.length, 0);
   if (totalMeals === 0) {
@@ -86,23 +67,15 @@ export function NutritionRoutineTracker({
       </p>
 
       <div className="routine-nutrition-meals">
-        {mealGroups.map(({ mealType, meals }) => {
-          const mealKey = `${dayNumber}-${mealType}`;
-
-          return (
-            <MealSection
-              key={mealKey}
-              mealType={mealType}
-              meals={meals}
-              expanded={expandedMeal === mealKey}
-              onToggleExpand={() =>
-                setExpandedMeal((prev) => (prev === mealKey ? null : mealKey))
-              }
-              updatingPlanId={updatingPlanId}
-              onToggleMeal={onToggle}
-            />
-          );
-        })}
+        {mealGroups.map(({ mealType, meals }) => (
+          <MealSection
+            key={`${dayNumber}-${mealType}`}
+            mealType={mealType}
+            meals={meals}
+            updatingPlanId={updatingPlanId}
+            onToggleMeal={onToggle}
+          />
+        ))}
       </div>
     </div>
   );

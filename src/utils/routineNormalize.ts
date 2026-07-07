@@ -140,6 +140,53 @@ function normalizeExerciseRoutineItem(raw: unknown): ExerciseRoutineItem | null 
   };
 }
 
+function normalizeNutritionPlanMeals(
+  raw: unknown,
+  fallbackPlanId?: string,
+): NutritionMeal[] {
+  if (!raw || typeof raw !== "object") return [];
+  const plan = raw as Record<string, unknown>;
+  const mealType = normalizeMealType(plan.mealType ?? plan.type);
+  const mealPlanId = String(
+    plan.id ?? plan.planId ?? plan.nutritionPlanId ?? fallbackPlanId ?? "",
+  );
+  const foodItemsRaw = plan.foodItems;
+
+  if (Array.isArray(foodItemsRaw) && foodItemsRaw.length > 0) {
+    const meals: NutritionMeal[] = [];
+
+    for (const item of foodItemsRaw) {
+      if (!item || typeof item !== "object") continue;
+      const food = item as Record<string, unknown>;
+      const name = String(food.name ?? food.food ?? "").trim();
+      const planId = String(food.id ?? food.planId ?? "");
+      if (!name || !planId) continue;
+
+      meals.push({
+        planId,
+        mealPlanId: mealPlanId || undefined,
+        mealType,
+        foods: [name],
+        calories: Number(food.calories ?? 0) || 0,
+        isCompleted: Boolean(food.isCompleted ?? food.completed),
+        progressionBar: clampProgress(
+          Number(
+            food.progressionBar ??
+              food.progressPercentage ??
+              food.progress ??
+              0,
+          ),
+        ),
+      });
+    }
+
+    return meals;
+  }
+
+  const legacyMeal = normalizeNutritionMeal(plan, mealPlanId);
+  return legacyMeal ? [legacyMeal] : [];
+}
+
 function normalizeNutritionMeal(
   raw: unknown,
   fallbackPlanId?: string,
@@ -278,9 +325,9 @@ function normalizeWeeklyDaysFormat(data: Record<string, unknown>): {
     const nutritionPlans = Array.isArray(day.nutritionPlans)
       ? day.nutritionPlans
       : [];
-    const meals = nutritionPlans
-      .map((plan) => normalizeNutritionMeal(plan, dayPlanId))
-      .filter((meal): meal is NutritionMeal => meal !== null);
+    const meals = nutritionPlans.flatMap((plan) =>
+      normalizeNutritionPlanMeals(plan, dayPlanId),
+    );
     if (meals.length > 0) {
       const averageCaloriesRaw = Number(day.averageCalories ?? day.average_calories);
       const averageCalories =
@@ -295,6 +342,9 @@ function normalizeWeeklyDaysFormat(data: Record<string, unknown>): {
         meals,
         averageCalories,
         nutritionSummary: normalizeNutritionSummary(day.nutritionSummary),
+        nutritionQualityScore: clampProgress(
+          Number(day.nutritionQualityScore ?? day.nutrition_quality_score ?? 0),
+        ) || undefined,
       });
     }
 

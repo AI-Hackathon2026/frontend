@@ -214,6 +214,7 @@ export interface ExerciseRoutineItem {
 
 export interface NutritionMeal {
   planId: string;
+  mealPlanId?: string;
   mealType: MealType;
   foods: string[];
   calories: number;
@@ -233,6 +234,7 @@ export interface NutritionRoutineDay {
   meals: NutritionMeal[];
   averageCalories?: number;
   nutritionSummary?: NutritionSummaryEntry[];
+  nutritionQualityScore?: number;
 }
 
 export interface RoutineInfoItem {

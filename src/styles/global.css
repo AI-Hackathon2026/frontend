@@ -498,6 +498,11 @@ button {
   place-items: center;
 }
 
+.health-pulse-mark--xs {
+  width: 44px;
+  height: 44px;
+}
+
 .health-pulse-mark--sm {
   width: 112px;
   height: 112px;
@@ -582,6 +587,16 @@ button {
   animation: health-heartbeat var(--pulse-beat-ms) ease-in-out infinite;
 }
 
+.health-pulse-mark--xs .health-pulse-core {
+  width: 32px;
+  height: 32px;
+}
+
+.health-pulse-mark--xs .health-pulse-ripple {
+  width: 32px;
+  height: 32px;
+}
+
 .health-pulse-mark--md .health-pulse-core {
   width: 96px;
   height: 96px;
@@ -627,6 +642,10 @@ button {
   font-weight: 300;
   color: var(--primary);
   line-height: 1;
+}
+
+.health-pulse-mark--xs .health-pulse-icon {
+  font-size: 0.95rem;
 }
 
 .health-pulse-mark--md .health-pulse-icon {
@@ -3886,71 +3905,89 @@ button {
 }
 
 /* ── Chat FAB + Popup ── */
+.chat-fab-anchor--routine {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.chat-fab-hint {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: #8892a8;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.chat-fab-hint-key {
+  display: inline-block;
+  min-width: 1.125rem;
+  padding: 0.0625rem 0.3125rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  font-family: var(--font-display);
+  font-size: 0.625rem;
+  color: #c5d0e0;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .chat-fab {
   position: fixed;
   right: 1.25rem;
   bottom: 1.25rem;
   z-index: 1200;
-  width: 3.35rem;
-  height: 3.35rem;
-  border: 1px solid rgba(0, 229, 192, 0.45);
+  width: 5.5rem;
+  height: 5.5rem;
+  border: none;
   border-radius: 50%;
-  background: linear-gradient(145deg, rgba(0, 229, 192, 0.28), rgba(77, 159, 255, 0.22));
-  box-shadow:
-    0 0 24px rgba(0, 229, 192, 0.28),
-    0 8px 24px rgba(0, 0, 0, 0.35);
+  background: transparent;
+  box-shadow: none;
   cursor: pointer;
   display: grid;
   place-items: center;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  overflow: visible;
+  padding: 0;
+  transition: transform 0.15s ease;
+}
+
+.chat-fab-anchor--routine .chat-fab {
+  position: static;
+  right: auto;
+  bottom: auto;
+}
+
+.chat-fab--routine .chat-fab-pulse.health-pulse-mark--xs {
+  width: 88px;
+  height: 88px;
+}
+
+.chat-fab--routine .chat-fab-pulse.health-pulse-mark--xs .health-pulse-core {
+  width: 64px;
+  height: 64px;
+}
+
+.chat-fab--routine .chat-fab-pulse.health-pulse-mark--xs .health-pulse-ripple {
+  width: 64px;
+  height: 64px;
+}
+
+.chat-fab--routine .chat-fab-pulse.health-pulse-mark--xs .health-pulse-icon {
+  font-size: 1.9rem;
 }
 
 .chat-fab:hover {
   transform: translateY(-2px) scale(1.04);
-  box-shadow:
-    0 0 32px rgba(0, 229, 192, 0.4),
-    0 12px 28px rgba(0, 0, 0, 0.4);
 }
 
-.chat-fab-glow {
-  position: absolute;
-  inset: -4px;
-  border-radius: inherit;
-  background: radial-gradient(circle, rgba(0, 229, 192, 0.35), transparent 70%);
-  animation: chat-fab-pulse 2.4s ease-in-out infinite;
-}
-
-.chat-fab-icon {
-  position: relative;
-  font-size: 1.25rem;
-  filter: drop-shadow(0 0 8px rgba(0, 229, 192, 0.5));
-}
-
-.chat-fab-avatar {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  overflow: hidden;
-  border-radius: 50%;
-}
-
-.chat-fab-avatar .avatar-svg {
-  transform: scale(0.92);
-}
-
-@keyframes chat-fab-pulse {
-  0%,
-  100% {
-    opacity: 0.45;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 0.85;
-    transform: scale(1.08);
-  }
+.chat-fab-pulse {
+  pointer-events: none;
 }
 
 .chat-popup-overlay {
@@ -6356,31 +6393,6 @@ button {
   min-width: 0;
 }
 
-.routine-week-refresh-note {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.65rem 0 0;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
-
-.routine-week-test-btn {
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  border: 1px dashed rgba(0, 229, 192, 0.35);
-  background: rgba(0, 229, 192, 0.06);
-  color: rgba(0, 229, 192, 0.85);
-  font-size: 0.68rem;
-  cursor: pointer;
-}
-
-.routine-week-test-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .routine-tracker-pagination {
   display: flex;
   align-items: center;
@@ -7509,6 +7521,12 @@ button {
   flex-direction: column;
   gap: 0.75rem;
   min-height: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.routine-chat-messages::-webkit-scrollbar {
+  display: none;
 }
 
 .routine-chat-empty {
@@ -7521,6 +7539,50 @@ button {
   border: 1px solid rgba(91, 140, 255, 0.25);
 }
 
+.routine-chat-starters-marquee {
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--border);
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 8%,
+    #000 92%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 8%,
+    #000 92%,
+    transparent 100%
+  );
+}
+
+.routine-chat-starters-track {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: max-content;
+  padding: 0 0.75rem;
+  animation: routine-chat-starters-scroll 28s linear infinite;
+}
+
+.routine-chat-starters-marquee:hover .routine-chat-starters-track {
+  animation-play-state: paused;
+}
+
+@keyframes routine-chat-starters-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 .routine-chat-starters {
   display: flex;
   flex-wrap: nowrap;
@@ -7528,9 +7590,7 @@ button {
   padding: 0.5rem 1rem;
   border-top: 1px solid var(--border);
   flex-shrink: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  overflow: hidden;
 }
 
 .routine-starter-chip {
@@ -7641,13 +7701,6 @@ button {
   padding: 0.5rem 0 1rem;
 }
 
-.routine-chat-starters--center {
-  flex-wrap: wrap;
-  justify-content: center;
-  border-top: none;
-  overflow: visible;
-}
-
 .routine-chat-bubble-row {
   display: flex;
   align-items: flex-start;
@@ -7732,6 +7785,28 @@ button {
 
 .routine-chat-bubble.is-typing span:nth-child(3) {
   animation-delay: 0.4s;
+}
+
+.routine-chat-streaming .markdown-content::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 0.9em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: #00c9a7;
+  animation: routineChatStreamCursor 0.9s step-end infinite;
+}
+
+@keyframes routineChatStreamCursor {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes routineChatBounce {
@@ -7854,11 +7929,31 @@ button {
     width: 100%;
   }
 
+  .chat-fab-anchor--routine {
+    right: 1rem;
+    bottom: 1rem;
+  }
+
   .chat-fab {
     right: 1rem;
     bottom: 1rem;
-    width: 3rem;
-    height: 3rem;
+    width: 5rem;
+    height: 5rem;
+  }
+
+  .chat-fab--routine .chat-fab-pulse.health-pulse-mark--xs {
+    width: 80px;
+    height: 80px;
+  }
+
+  .chat-fab--routine .chat-fab-pulse.health-pulse-mark--xs .health-pulse-core {
+    width: 58px;
+    height: 58px;
+  }
+
+  .chat-fab--routine .chat-fab-pulse.health-pulse-mark--xs .health-pulse-ripple {
+    width: 58px;
+    height: 58px;
   }
 
   .chat-popup-panel {
@@ -8416,151 +8511,237 @@ button {
 }
 
 .routine-nutrition-summary {
-  margin-bottom: 0.875rem;
+  margin-bottom: 0.375rem;
 }
 
 .routine-nutrition-summary-card {
   background: #1a2e44;
-  border-radius: 14px;
-  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  padding: 0.25rem 0.375rem;
 }
 
-.routine-nutrition-summary-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.routine-nutrition-summary-title {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #fff;
-}
-
-.routine-nutrition-summary-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  border: 1px solid rgba(0, 201, 167, 0.25);
-  background: rgba(0, 201, 167, 0.12);
-  border-radius: 20px;
-  padding: 0.25rem 0.75rem;
-  flex-shrink: 0;
-}
-
-.routine-nutrition-summary-pill-value {
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: #00c9a7;
-}
-
-.routine-nutrition-summary-pill-label {
-  font-size: 0.6875rem;
-  color: #8da0b3;
-}
-
-.routine-nutrition-summary-cal-row {
-  display: flex;
-  align-items: baseline;
-  gap: 0.375rem;
-  margin-bottom: 0.5rem;
-}
-
-.routine-nutrition-summary-cal-num {
-  font-size: 1.375rem;
-  font-weight: 500;
-  color: #fff;
-}
-
-.routine-nutrition-summary-cal-unit {
-  font-size: 0.75rem;
-  color: #8da0b3;
-}
-
-.routine-nutrition-summary-cal-target {
-  font-size: 0.75rem;
-  color: #4d6480;
-}
-
-.routine-nutrition-summary-cal-bar {
-  height: 5px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
+.routine-nutrition-donut-wrap {
+  position: relative;
   overflow: hidden;
-  margin-bottom: 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 0.375rem 0.4375rem 0.4375rem;
 }
 
-.routine-nutrition-summary-cal-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 600ms ease;
-}
-
-.routine-nutrition-summary-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
-
-.routine-nutrition-summary-group-label {
-  margin: 0 0 0.5rem;
-  font-size: 0.6875rem;
-  font-weight: 500;
-  color: #8da0b3;
-}
-
-.routine-nutrition-summary-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.625rem;
-}
-
-@media (min-width: 420px) {
-  .routine-nutrition-summary-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.625rem 1rem;
-  }
-}
-
-.routine-nutrition-summary-item {
-  min-width: 0;
-}
-
-.routine-nutrition-summary-item-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+.routine-nutrition-donut-head {
   margin-bottom: 0.3125rem;
 }
 
-.routine-nutrition-summary-item-label {
+.routine-nutrition-donut-title {
+  margin: 0;
   font-size: 0.75rem;
-  color: #cbd8e4;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #eef2fb;
+  line-height: 1.2;
 }
 
-.routine-nutrition-summary-item-value {
+.routine-nutrition-donut-body {
+  position: relative;
+  display: flex;
+  gap: 0.4375rem;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+}
+
+.routine-nutrition-donut-chart-col {
+  position: relative;
+  flex: 0 0 auto;
+  width: 88px;
+  height: 88px;
+  margin: 0;
+}
+
+.routine-nutrition-donut-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.routine-nutrition-donut-seg {
+  cursor: pointer;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform 180ms ease,
+    filter 180ms ease,
+    opacity 180ms ease;
+  stroke: #0a0f1c;
+  stroke-width: 1.5;
+}
+
+.routine-nutrition-donut-seg.is-dim {
+  opacity: 0.28;
+}
+
+.routine-nutrition-donut-seg.is-active {
+  transform: scale(1.045);
+  filter: brightness(1.18) saturate(1.05)
+    drop-shadow(0 0 10px rgba(255, 255, 255, 0.18));
+}
+
+.routine-nutrition-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.routine-nutrition-donut-center-label {
+  font-size: 0.5rem;
+  color: #8892a8;
+  margin-bottom: 0.0625rem;
+  line-height: 1.1;
+}
+
+.routine-nutrition-donut-center-value {
+  font-family: var(--font-display);
   font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #eef2fb;
+}
+
+.routine-nutrition-donut-center-unit {
+  font-size: 0.5rem;
+  color: #8892a8;
+  margin-top: 0.0625rem;
+  line-height: 1.1;
+}
+
+.routine-nutrition-donut-legend {
+  flex: 1 1 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 0.4375rem;
+  min-width: 0;
+  align-items: start;
+}
+
+.routine-nutrition-donut-legend-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.routine-nutrition-donut-legend-label {
+  margin: 0 0 0.125rem;
+  font-size: 0.5rem;
+  color: #8892a8;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.routine-nutrition-donut-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+}
+
+.routine-nutrition-donut-row {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  justify-content: start;
+  gap: 0.1875rem;
+  padding: 0.0625rem 0;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1.15;
+  transition:
+    background 150ms ease,
+    opacity 150ms ease;
+}
+
+.routine-nutrition-donut-row:hover,
+.routine-nutrition-donut-row.is-active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.routine-nutrition-donut-row.is-dim {
+  opacity: 0.4;
+}
+
+.routine-nutrition-donut-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}
+
+.routine-nutrition-donut-row-name {
+  font-size: 0.5625rem;
+  color: #eef2fb;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.routine-nutrition-donut-row-pct {
+  font-family: var(--font-display);
+  font-size: 0.5625rem;
   font-weight: 600;
   flex-shrink: 0;
 }
 
-.routine-nutrition-summary-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
+.routine-nutrition-donut-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #1c2740;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 0.3125rem 0.4375rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translate(-50%, calc(-100% - 6px));
+  transition: opacity 120ms ease;
+  z-index: 20;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
-.routine-nutrition-summary-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 280ms ease;
+.routine-nutrition-donut-tooltip.is-visible {
+  opacity: 1;
+}
+
+.routine-nutrition-donut-tooltip-text {
+  margin: 0;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #eef2fb;
+}
+
+@media (max-width: 520px) {
+  .routine-nutrition-donut-body {
+    gap: 0.3125rem;
+  }
+
+  .routine-nutrition-donut-chart-col {
+    width: 76px;
+    height: 76px;
+  }
+
+  .routine-nutrition-donut-center-value {
+    font-size: 0.6875rem;
+  }
+
+  .routine-nutrition-donut-legend {
+    column-gap: 0.3125rem;
+  }
+
+  .routine-nutrition-donut-row-name,
+  .routine-nutrition-donut-row-pct {
+    font-size: 0.5rem;
+  }
 }
 
 .routine-nutrition-meals-divider {
@@ -8586,10 +8767,8 @@ button {
   align-items: center;
   gap: 0.625rem;
   width: 100%;
-  padding: 0.8125rem 1rem;
+  padding: 0.8125rem 1rem 0.5rem;
   background: transparent;
-  border: none;
-  cursor: pointer;
   text-align: left;
 }
 
@@ -8824,6 +9003,13 @@ button {
   font-size: 0.8125rem;
   color: var(--color-text-muted);
   text-align: center;
+}
+
+.routine-v2-week-countdown {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: #eef2fb;
 }
 
 .routine-v2-actions {

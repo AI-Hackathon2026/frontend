@@ -9,8 +9,8 @@ interface Props {
   onContinue: () => void;
 }
 
-const CREATE_TITLE = "맞춤 루틴이 준비됐어요";
-const CHANGE_TITLE = "새 루틴으로 업데이트됐어요";
+const CREATE_TITLE = "건강 루틴이 준비됐어요";
+const CHANGE_TITLE = "건강 루틴이 업데이트됐어요";
 
 const CREATE_HINT = "오늘부터 함께 건강한 습관을 만들어 보세요.";
 const CHANGE_HINT = "업데이트된 루틴으로 이번 주도 파이팅!";

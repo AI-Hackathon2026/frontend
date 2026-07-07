@@ -1,64 +1,16 @@
 import type { MealType, NutritionMeal } from "../../../types";
 import { MEAL_TYPE_ICONS, MEAL_TYPE_LABELS } from "../../../constants/routine";
 
-interface FoodRow {
-  id: string;
-  name: string;
-  calories: number;
-}
-
 interface Props {
   mealType: MealType;
   meals: NutritionMeal[];
-  expanded: boolean;
-  onToggleExpand: () => void;
   updatingPlanId?: string | null;
   onToggleMeal?: (planId: string, isCompleted: boolean) => void;
-}
-
-function buildFoodRows(meals: NutritionMeal[]): FoodRow[] {
-  const rows: FoodRow[] = [];
-
-  for (const meal of meals) {
-    if (meal.foods.length === 0) {
-      rows.push({
-        id: meal.planId || `meal-${meal.mealType}`,
-        name: "메뉴 정보 없음",
-        calories: meal.calories,
-      });
-      continue;
-    }
-
-    if (meal.foods.length === 1) {
-      rows.push({
-        id: meal.planId || `meal-${meal.mealType}-0`,
-        name: meal.foods[0],
-        calories: meal.calories,
-      });
-      continue;
-    }
-
-    const perFood = Math.round(meal.calories / meal.foods.length);
-    meal.foods.forEach((food, index) => {
-      rows.push({
-        id: meal.planId ? `${meal.planId}-${index}` : `meal-${meal.mealType}-${index}`,
-        name: food,
-        calories:
-          index === meal.foods.length - 1
-            ? meal.calories - perFood * (meal.foods.length - 1)
-            : perFood,
-      });
-    });
-  }
-
-  return rows;
 }
 
 export function MealSection({
   mealType,
   meals,
-  expanded,
-  onToggleExpand,
   updatingPlanId = null,
   onToggleMeal,
 }: Props) {
@@ -68,17 +20,10 @@ export function MealSection({
   const done = meals.filter((meal) => meal.isCompleted).length;
   const total = meals.length;
   const allDone = total > 0 && done === total;
-  const foodRows = buildFoodRows(meals);
-  const primaryMeal = meals[0];
 
   return (
     <div className="routine-nutrition-meal-card">
-      <button
-        type="button"
-        className="routine-nutrition-meal-header"
-        aria-expanded={expanded}
-        onClick={onToggleExpand}
-      >
+      <div className="routine-nutrition-meal-header">
         <span className="routine-nutrition-meal-icon" aria-hidden>
           {icon}
         </span>
@@ -93,52 +38,42 @@ export function MealSection({
         >
           {done}/{total}
         </span>
-        <span
-          className={`routine-nutrition-meal-chevron${expanded ? " is-open" : ""}`}
-          aria-hidden
-        >
-          ›
-        </span>
-      </button>
+      </div>
 
-      {expanded && (
-        <div className="routine-nutrition-meal-body">
-          {foodRows.map((food) => {
-            const completed = primaryMeal?.isCompleted ?? false;
-            const disabled =
-              !primaryMeal?.planId ||
-              !onToggleMeal ||
-              updatingPlanId === primaryMeal.planId;
+      <div className="routine-nutrition-meal-body">
+        {meals.map((meal) => {
+          const foodName = meal.foods[0] ?? "메뉴 정보 없음";
+          const disabled =
+            !meal.planId || !onToggleMeal || updatingPlanId === meal.planId;
 
-            return (
-              <button
-                key={food.id}
-                type="button"
-                className={`routine-nutrition-food-row${completed ? " is-complete" : ""}`}
-                disabled={disabled}
-                onClick={() => {
-                  if (primaryMeal?.planId) {
-                    onToggleMeal?.(primaryMeal.planId, primaryMeal.isCompleted);
-                  }
-                }}
+          return (
+            <button
+              key={meal.planId || `${mealType}-${foodName}`}
+              type="button"
+              className={`routine-nutrition-food-row${meal.isCompleted ? " is-complete" : ""}`}
+              disabled={disabled}
+              onClick={() => {
+                if (meal.planId) {
+                  onToggleMeal?.(meal.planId, meal.isCompleted);
+                }
+              }}
+            >
+              <span
+                className={`routine-nutrition-food-check${meal.isCompleted ? " is-done" : ""}`}
+                aria-hidden
               >
-                <span
-                  className={`routine-nutrition-food-check${completed ? " is-done" : ""}`}
-                  aria-hidden
-                >
-                  {completed && "✓"}
+                {meal.isCompleted && "✓"}
+              </span>
+              <span className="routine-nutrition-food-name">{foodName}</span>
+              {meal.calories > 0 && (
+                <span className="routine-nutrition-food-cal">
+                  {meal.calories.toLocaleString()} kcal
                 </span>
-                <span className="routine-nutrition-food-name">{food.name}</span>
-                {food.calories > 0 && (
-                  <span className="routine-nutrition-food-cal">
-                    {food.calories.toLocaleString()} kcal
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

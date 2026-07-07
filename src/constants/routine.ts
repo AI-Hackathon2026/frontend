@@ -169,7 +169,7 @@ export function formatAverageReductionSummary(avgReduction: number): {
   }
   return {
     title: "4개월 꾸준히 하면",
-    message: `만성 질환 위험 평균 ${avgReduction.toFixed(1)}% 감소`,
+    message: `평균 만성 질환 위험률 ${avgReduction.toFixed(1)}% 감소`,
     muted: false,
   };
 }
@@ -182,13 +182,13 @@ export function formatModalAverageReductionSummary(avgReduction: number): {
 } {
   if (avgReduction <= 0.05) {
     return {
-      title: "평균 만성 질환 위험 변화",
+      title: "평균 만성 질환 위험률 변화",
       message: "지금과 비슷해요",
       muted: true,
     };
   }
   return {
-    title: "평균 만성 질환 위험 변화",
+    title: "평균 만성 질환 위험률 변화",
     message: `약 ${avgReduction.toFixed(1)}% 감소 예상`,
     muted: false,
   };
@@ -228,8 +228,7 @@ export function getHighestRiskDisease(
 }
 
 export const STARTER_PROMPTS = [
-  "오늘 운동을 더 쉽게 바꿔줘",
-  "점심 메뉴를 더 간단하게",
-  "나트륨을 줄이는 식단 팁 알려줘",
-  "이 루틴에서 가장 중요한 게 뭐야?",
+  "오늘 운동 강도를 높여줘",
+  "식단을 전부 일식으로 바꿔줘",
+  "지금 운동 루틴과 식단에 대해 자세히 알려줘",
 ];

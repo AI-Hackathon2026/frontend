@@ -1,8 +1,13 @@
+import { useCallback } from "react";
 import { MarkdownContent } from "../MarkdownContent";
+import { useStreamingText } from "../../hooks/useStreamingText";
 import type { RoutineChatMessage } from "../../types/routine-chat.types";
 
 interface Props {
   message: RoutineChatMessage;
+  isStreaming?: boolean;
+  onStreamComplete?: () => void;
+  onStreamProgress?: () => void;
 }
 
 function formatMessageTime(createdAt?: string): string {
@@ -15,9 +20,28 @@ function formatMessageTime(createdAt?: string): string {
   });
 }
 
-export function RoutineMessageBubble({ message }: Props) {
+export function RoutineMessageBubble({
+  message,
+  isStreaming = false,
+  onStreamComplete,
+  onStreamProgress,
+}: Props) {
   const isUser = message.role === "USER";
   const time = formatMessageTime(message.createdAt);
+
+  const handleStreamComplete = useCallback(() => {
+    onStreamComplete?.();
+  }, [onStreamComplete]);
+
+  const { text: streamedText, isComplete } = useStreamingText(
+    message.text,
+    !isUser && isStreaming,
+    handleStreamComplete,
+    onStreamProgress,
+  );
+
+  const aiText = !isUser && isStreaming ? streamedText : message.text;
+  const showCursor = !isUser && isStreaming && !isComplete;
 
   return (
     <div
@@ -33,9 +57,13 @@ export function RoutineMessageBubble({ message }: Props) {
         {isUser ? (
           message.text
         ) : (
-          <MarkdownContent content={message.text} />
+          <div className={showCursor ? "routine-chat-streaming" : undefined}>
+            <MarkdownContent content={aiText} />
+          </div>
         )}
-        {time && <div className="routine-chat-bubble-time">{time}</div>}
+        {time && isComplete && (
+          <div className="routine-chat-bubble-time">{time}</div>
+        )}
       </div>
     </div>
   );

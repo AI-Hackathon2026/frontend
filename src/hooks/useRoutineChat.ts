@@ -24,6 +24,9 @@ export function useRoutineChat({
   const [messages, setMessages] = useState<RoutineChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
+    null,
+  );
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -93,13 +96,15 @@ export function useRoutineChat({
       try {
         const response = await sendRoutineChatMessage(chatId, text.trim());
 
+        const aiId = `ai-${Date.now()}`;
         const aiMsg: RoutineChatMessage = {
-          id: `ai-${Date.now()}`,
+          id: aiId,
           role: "AI",
           text: response.aiResponse,
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, aiMsg]);
+        setStreamingMessageId(aiId);
 
         if (response.routineUpdated && response.routine) {
           onRoutineUpdate(response.routine);
@@ -114,5 +119,18 @@ export function useRoutineChat({
     [chatId, sending, onRoutineUpdate],
   );
 
-  return { chatId, messages, loading, sending, error, sendMessage };
+  const completeStreaming = useCallback(() => {
+    setStreamingMessageId(null);
+  }, []);
+
+  return {
+    chatId,
+    messages,
+    loading,
+    sending,
+    streamingMessageId,
+    error,
+    sendMessage,
+    completeStreaming,
+  };
 }

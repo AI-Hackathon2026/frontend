@@ -1,4 +1,3 @@
-import { DEFAULT_DAILY_CALORIE_TARGET } from "../constants/nutrition";
 import {
   NUTRIENT_CATALOG,
   NUTRIENT_DISPLAY_ORDER,
@@ -158,17 +157,6 @@ export function getCurrentMealType(): MealType | null {
   if (hour >= 11 && hour < 17) return "LUNCH";
   if (hour >= 17 && hour < 22) return "DINNER";
   return null;
-}
-
-export function resolveCalorieTarget(
-  averageCalories?: number,
-  targetOverride?: number,
-): number {
-  if (targetOverride && targetOverride > 0) return targetOverride;
-  if (averageCalories && averageCalories > 0) {
-    return Math.max(averageCalories, DEFAULT_DAILY_CALORIE_TARGET);
-  }
-  return DEFAULT_DAILY_CALORIE_TARGET;
 }
 
 export function resolveDayTotalCalories(

@@ -27,13 +27,35 @@ export function isRoutineWeekExpired(routineId: string): boolean {
   return Date.now() - anchor >= WEEK_MS;
 }
 
-/** Test helper: pretend a full week has passed. */
-export function simulateWeekElapsedForTest(routineId: string) {
-  resetRoutineWeekAnchor(routineId, Date.now() - WEEK_MS - 1);
+export function getRoutineRefreshRemainingMs(routineId: string): number {
+  const anchor = getRoutineWeekAnchor(routineId);
+  return Math.max(0, WEEK_MS - (Date.now() - anchor));
 }
 
-export function daysUntilRoutineRefresh(routineId: string): number {
-  const anchor = getRoutineWeekAnchor(routineId);
-  const remaining = WEEK_MS - (Date.now() - anchor);
-  return Math.max(0, Math.ceil(remaining / (24 * 60 * 60 * 1000)));
+export interface RoutineRefreshCountdown {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+}
+
+export function getRoutineRefreshCountdown(
+  routineId: string,
+): RoutineRefreshCountdown {
+  const remaining = getRoutineRefreshRemainingMs(routineId);
+  const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
+  const hours = Math.floor(
+    (remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000),
+  );
+  const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+  const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+
+  return { days, hours, minutes, seconds };
+}
+
+export function formatRoutineRefreshCountdown(
+  countdown: RoutineRefreshCountdown,
+): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${countdown.days}:${pad(countdown.hours)}:${pad(countdown.minutes)}:${pad(countdown.seconds)}`;
 }

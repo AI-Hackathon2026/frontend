@@ -41,10 +41,23 @@ export const NUTRIENT_DISPLAY_ORDER = [
   "cholesterol",
 ] as const;
 
-export const DEFAULT_DAILY_CALORIE_TARGET = 2000;
-
 export const NUTRIENT_GROUP_ORDER: NutrientGroup[] = [
   "vitamin",
   "mineral",
   "macro",
 ];
+
+/** Fixed palette for nutrition donut segments (matches design spec). */
+export const NUTRIENT_DONUT_COLORS: Record<string, string> = {
+  "vitamin A": "#F4B740",
+  "vitamin C": "#FFD873",
+  "vitamin D": "#E08A2B",
+  calcium: "#4FC3D9",
+  sodium: "#4C8FD9",
+  protein: "#FF5C77",
+  carbohydrates: "#FF8A4C",
+  fat: "#C77DFF",
+  fiber: "#6BCB77",
+  sugar: "#FF7AC6",
+  cholesterol: "#7B9CFF",
+};

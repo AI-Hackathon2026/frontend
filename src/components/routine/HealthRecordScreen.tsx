@@ -50,7 +50,7 @@ export function HealthRecordScreen({
       .then(([data, status, routine]) => {
         if (!data) {
           setError(
-            "건강 기록이 없습니다. 맞춤 루틴을 위해 건강 정보를 먼저 입력해 주세요.",
+            "건강 기록이 없습니다. 건강 루틴을 위해 건강 정보를 먼저 입력해 주세요.",
           );
           return;
         }

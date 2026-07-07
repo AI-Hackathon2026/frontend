@@ -738,6 +738,13 @@ export const api = {
     }).then((raw) => normalizePlanProgressUpdate(raw));
   },
 
+  updateNutritionFoodItemProgress(foodItemId: string, isCompleted: boolean) {
+    return request<unknown>(`/routines/nutrition-food-items/${foodItemId}/progress`, {
+      method: "PATCH",
+      body: JSON.stringify({ isCompleted }),
+    }).then((raw) => normalizePlanProgressUpdate(raw));
+  },
+
   updateNutritionPlanProgress(planId: string, isCompleted: boolean) {
     return request<unknown>(`/routines/nutrition-plans/${planId}/progress`, {
       method: "PATCH",
@@ -795,7 +802,7 @@ export const api = {
   },
 
   getRoutineChatMessages(chatId: string) {
-    return request<unknown[]>(`/chats/${chatId}/messages`).then((raw) =>
+    return request<unknown[]>(`/chat/${chatId}/messages`).then((raw) =>
       (Array.isArray(raw) ? raw : []).map((item) => {
         const msg = item as Record<string, unknown>;
         const roleRaw = msg.role ?? msg.from;

@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
 interface Props {
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   bpm?: number;
   className?: string;
 }

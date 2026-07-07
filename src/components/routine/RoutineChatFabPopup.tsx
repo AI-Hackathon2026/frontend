@@ -1,21 +1,27 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { UpdatedRoutine } from "../../types/routine-chat.types";
-import { AvatarSvg } from "../avatar/AvatarSvg";
+import { HealthPulseMark } from "../HealthPulseMark";
 import { RoutineChatScreen } from "./RoutineChatScreen";
 
 interface Props {
   chatId: string | null;
-  routineSummary?: string;
-  avatarLevel?: number;
   onRoutineUpdate: (routine: UpdatedRoutine) => void;
   onChatIdResolved?: (chatId: string) => void;
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName.toLowerCase();
+  return (
+    tag === "input" ||
+    tag === "textarea" ||
+    target.isContentEditable
+  );
+}
+
 export function RoutineChatFabPopup({
   chatId,
-  routineSummary = "",
-  avatarLevel = 1,
   onRoutineUpdate,
   onChatIdResolved,
 }: Props) {
@@ -27,19 +33,31 @@ export function RoutineChatFabPopup({
   }, [chatId]);
 
   useEffect(() => {
-    if (!open) return;
-
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape" && open) {
+        setOpen(false);
+        return;
+      }
+
+      if (event.key !== "/") return;
+      if (isEditableTarget(event.target)) return;
+
+      event.preventDefault();
+      setOpen((prev) => !prev);
     }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKeyDown);
 
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
 
@@ -48,19 +66,26 @@ export function RoutineChatFabPopup({
     onChatIdResolved?.(id);
   }
 
-  return (
-    <>
+  const fab = !open ? (
+    <div className="chat-fab-anchor chat-fab-anchor--routine">
+      <span className="chat-fab-hint">
+        <kbd className="chat-fab-hint-key">/</kbd> AI 상담
+      </span>
       <button
         type="button"
-        className="chat-fab"
+        className="chat-fab chat-fab--routine"
         aria-label="AI 루틴 상담 열기"
+        aria-keyshortcuts="/"
         onClick={() => setOpen(true)}
       >
-        <span className="chat-fab-glow" aria-hidden />
-        <span className="chat-fab-avatar" aria-hidden>
-          <AvatarSvg level={avatarLevel} size={48} />
-        </span>
+        <HealthPulseMark size="xs" bpm={30} className="chat-fab-pulse" />
       </button>
+    </div>
+  ) : null;
+
+  return (
+    <>
+      {fab && createPortal(fab, document.body)}
 
       {open &&
         createPortal(
@@ -93,7 +118,6 @@ export function RoutineChatFabPopup({
               <div className="chat-popup-body chat-popup-body--routine">
                 <RoutineChatScreen
                   chatId={resolvedChatId}
-                  routineSummary={routineSummary}
                   variant="popup"
                   onClose={() => setOpen(false)}
                   onRoutineUpdate={onRoutineUpdate}
