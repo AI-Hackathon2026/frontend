@@ -5,10 +5,14 @@ import { AuthForm } from "../components/AuthForm";
 import {
   CookieBlockedPrompt,
   PwaCookieHint,
+  usePwaCookiePrecheck,
 } from "../components/CookieBlockedPrompt";
 import { HeAIthLogo } from "../components/HeAIthLogo";
 import { SignupSuccessScreen } from "../components/SignupSuccessScreen";
-import { verifyAuthSession } from "../utils/cookieSupport";
+import {
+  ensureCookieAccessForLogin,
+  verifyAuthSession,
+} from "../utils/cookieSupport";
 import { verifyIsAdmin, isAdminRole } from "../utils/authRole";
 
 export function UserAuthPage() {
@@ -23,6 +27,10 @@ export function UserAuthPage() {
   const [loading, setLoading] = useState(false);
   const [signupComplete, setSignupComplete] = useState(false);
   const [showCookiePrompt, setShowCookiePrompt] = useState(false);
+  const { showPrecheckPrompt, dismissPrecheck } = usePwaCookiePrecheck(
+    mode === "signin" && !signupComplete,
+  );
+  const cookiePromptOpen = showCookiePrompt || showPrecheckPrompt;
 
   useEffect(() => {
     const state = location.state as { cookieBlocked?: boolean } | null;
@@ -52,6 +60,13 @@ export function UserAuthPage() {
 
     try {
       if (mode === "signin") {
+        const cookieAccess = await ensureCookieAccessForLogin();
+        if (!cookieAccess.ok) {
+          setShowCookiePrompt(true);
+          setError("로그인하려면 먼저 쿠키를 허용해 주세요.");
+          return;
+        }
+
         const result = await api.signIn(email, password);
         const isAdmin =
           isAdminRole(result.role) || (await verifyIsAdmin(result.role));
@@ -148,7 +163,7 @@ export function UserAuthPage() {
                 </button>
               </div>
 
-              <PwaCookieHint onOpenGuide={() => setShowCookiePrompt(true)} />
+              <PwaCookieHint onAllow={() => setShowCookiePrompt(true)} />
 
               <AuthForm
                 mode={mode}
@@ -179,14 +194,20 @@ export function UserAuthPage() {
       </div>
 
       <CookieBlockedPrompt
-        open={showCookiePrompt}
-        onClose={() => setShowCookiePrompt(false)}
+        open={cookiePromptOpen}
+        onClose={() => {
+          setShowCookiePrompt(false);
+          dismissPrecheck();
+        }}
         onResolved={() => {
           setShowCookiePrompt(false);
+          dismissPrecheck();
           setError("");
           navigate("/app", { replace: true });
         }}
-        reason={error ? "login" : "session"}
+        reason={
+          showPrecheckPrompt ? "precheck" : error ? "login" : "session"
+        }
       />
     </>
   );

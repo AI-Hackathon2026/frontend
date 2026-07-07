@@ -9474,6 +9474,39 @@ button {
   line-height: 1.45;
 }
 
+.pwa-cookie-hint-btn:hover {
+  color: var(--primary-hover);
+}
+
+.pwa-cookie-hint-allow {
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
+.cookie-blocked-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: rgba(0, 229, 192, 0.06);
+  border: 1px solid rgba(0, 229, 192, 0.18);
+}
+
+.cookie-blocked-allow-btn {
+  width: 100%;
+  font-size: 1rem;
+  padding: 0.85rem 1rem;
+}
+
+.cookie-blocked-hero-hint {
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 .pwa-cookie-hint-btn {
   align-self: flex-start;
   border: none;

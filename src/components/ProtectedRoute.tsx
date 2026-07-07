@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { api, clearRole, clearUsername } from "../api/client";
 import { HeAIthLogo } from "./HeAIthLogo";
-import { isCrossOriginApi } from "../utils/cookieSupport";
+import { isUsingApiProxy } from "../api/baseUrl";
 import { isStandalonePwa } from "../utils/pwa";
 
 interface ProtectedRouteProps {
@@ -24,7 +24,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       } catch {
         clearUsername();
         clearRole();
-        setCookieBlocked(isStandalonePwa() && isCrossOriginApi());
+        setCookieBlocked(isStandalonePwa() && !isUsingApiProxy());
         setStatus("unauthenticated");
       }
     }
