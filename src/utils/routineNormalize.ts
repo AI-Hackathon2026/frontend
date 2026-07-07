@@ -1,13 +1,18 @@
 import { DAY_OF_WEEK_ORDER } from "../constants/routine";
 import type {
+  CharacterProgress,
   ExerciseRoutineItem,
   MealType,
   NutritionMeal,
   NutritionRoutineDay,
   Routine,
   RoutineDifficulty,
+  RoutineInfo,
+  RoutineInfoItem,
   RoutineLog,
 } from "../types";
+import { extractCharacterProgress } from "./characterNormalize";
+import { normalizeNutritionSummary } from "./nutritionSummary";
 
 function clampProgress(value: number): number {
   if (Number.isNaN(value)) return 0;
@@ -277,11 +282,19 @@ function normalizeWeeklyDaysFormat(data: Record<string, unknown>): {
       .map((plan) => normalizeNutritionMeal(plan, dayPlanId))
       .filter((meal): meal is NutritionMeal => meal !== null);
     if (meals.length > 0) {
+      const averageCaloriesRaw = Number(day.averageCalories ?? day.average_calories);
+      const averageCalories =
+        !Number.isNaN(averageCaloriesRaw) && averageCaloriesRaw > 0
+          ? Math.round(averageCaloriesRaw)
+          : undefined;
+
       nutritionRoutine.push({
         planId: dayPlanId || undefined,
         dayOfWeek: dayOfWeek || undefined,
         dayNumber,
         meals,
+        averageCalories,
+        nutritionSummary: normalizeNutritionSummary(day.nutritionSummary),
       });
     }
 
@@ -338,6 +351,44 @@ function normalizeDifficulty(raw: unknown): RoutineDifficulty | null {
     return value;
   }
   return null;
+}
+
+function normalizeRoutineInfoItem(raw: unknown): RoutineInfoItem | null {
+  if (!raw || typeof raw !== "object") return null;
+  const item = raw as Record<string, unknown>;
+  const name = String(item.name ?? "").trim();
+  if (!name) return null;
+  return {
+    name,
+    tooltip: String(item.tooltip ?? "").trim(),
+  };
+}
+
+function normalizeRoutineInfo(raw: unknown): RoutineInfo | null {
+  if (raw == null) return null;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+
+  const info = raw as Record<string, unknown>;
+  const nutrition = Array.isArray(info.nutrition)
+    ? info.nutrition
+        .map(normalizeRoutineInfoItem)
+        .filter((item): item is RoutineInfoItem => item !== null)
+    : [];
+  const workout = Array.isArray(info.workout)
+    ? info.workout
+        .map(normalizeRoutineInfoItem)
+        .filter((item): item is RoutineInfoItem => item !== null)
+    : [];
+  const sources = Array.isArray(info.sources)
+    ? info.sources.map((source) => String(source).trim()).filter(Boolean)
+    : [];
+  const reason = String(info.reason ?? "").trim();
+
+  if (!reason && nutrition.length === 0 && workout.length === 0) {
+    return null;
+  }
+
+  return { reason, nutrition, workout, sources };
 }
 
 export function routineResponseHasContent(raw: unknown): boolean {
@@ -408,6 +459,7 @@ export function normalizeRoutine(raw: unknown): Routine | null {
 
   const summaryText = resolveRoutineSummary(merged);
   const reportReadme = resolveReportReadme(merged);
+  const routineInfo = normalizeRoutineInfo(merged.routineInfo);
 
   const hasTrackerData =
     exerciseRoutine.length > 0 || nutritionRoutine.length > 0;
@@ -451,11 +503,15 @@ export function normalizeRoutine(raw: unknown): Routine | null {
         .filter((chat) => chat.id)
     : undefined;
 
+  const characterProgress: CharacterProgress | undefined =
+    extractCharacterProgress(data) ?? undefined;
+
   return {
     id: resolvedId,
     difficulty,
     summary: summaryText,
     reportReadme,
+    routineInfo,
     title: String(merged.title ?? summaryText.slice(0, 80) ?? ""),
     nutritionPlan: String(merged.nutritionPlan ?? summaryText),
     workoutPlan: String(merged.workoutPlan ?? summaryText),
@@ -467,6 +523,7 @@ export function normalizeRoutine(raw: unknown): Routine | null {
     ),
     logs,
     chats,
+    characterProgress,
   };
 }
 
@@ -483,6 +540,7 @@ export function parseRoutineMeResponse(raw: unknown): Routine | null {
   const merged = { ...trackerSource, ...data };
   const summaryText = resolveRoutineSummary(merged);
   const reportReadme = resolveReportReadme(merged);
+  const routineInfo = normalizeRoutineInfo(merged.routineInfo);
 
   return {
     id: extractRoutineId(data, routineEntries) || weeklyDays.routineId,
@@ -491,6 +549,7 @@ export function parseRoutineMeResponse(raw: unknown): Routine | null {
       "MODERATE",
     summary: summaryText,
     reportReadme,
+    routineInfo,
     title: String(data.title ?? trackerSource.title ?? summaryText.slice(0, 80)),
     nutritionPlan: String(
       data.nutritionPlan ?? trackerSource.nutritionPlan ?? summaryText,
@@ -504,5 +563,6 @@ export function parseRoutineMeResponse(raw: unknown): Routine | null {
     trackerCompleted: Boolean(trackerSource.isCompleted ?? data.isCompleted ?? false),
     logs: undefined,
     chats: undefined,
+    characterProgress: extractCharacterProgress(data) ?? undefined,
   };
 }

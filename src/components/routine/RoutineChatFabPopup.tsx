@@ -1,19 +1,30 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import type { UpdatedRoutine } from "../../types/routine-chat.types";
+import { AvatarSvg } from "../avatar/AvatarSvg";
 import { RoutineChatScreen } from "./RoutineChatScreen";
 
 interface Props {
-  routineId: string;
-  chatId: string;
-  onRoutineUpdated: () => void;
+  chatId: string | null;
+  routineSummary?: string;
+  avatarLevel?: number;
+  onRoutineUpdate: (routine: UpdatedRoutine) => void;
+  onChatIdResolved?: (chatId: string) => void;
 }
 
 export function RoutineChatFabPopup({
-  routineId,
   chatId,
-  onRoutineUpdated,
+  routineSummary = "",
+  avatarLevel = 1,
+  onRoutineUpdate,
+  onChatIdResolved,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [resolvedChatId, setResolvedChatId] = useState<string | null>(chatId);
+
+  useEffect(() => {
+    setResolvedChatId(chatId);
+  }, [chatId]);
 
   useEffect(() => {
     if (!open) return;
@@ -32,17 +43,22 @@ export function RoutineChatFabPopup({
     };
   }, [open]);
 
+  function handleChatIdResolved(id: string) {
+    setResolvedChatId(id);
+    onChatIdResolved?.(id);
+  }
+
   return (
     <>
       <button
         type="button"
         className="chat-fab"
-        aria-label="AI 건강 멘토 열기"
+        aria-label="AI 루틴 상담 열기"
         onClick={() => setOpen(true)}
       >
         <span className="chat-fab-glow" aria-hidden />
-        <span className="chat-fab-icon" aria-hidden>
-          ✦
+        <span className="chat-fab-avatar" aria-hidden>
+          <AvatarSvg level={avatarLevel} size={48} />
         </span>
       </button>
 
@@ -59,11 +75,11 @@ export function RoutineChatFabPopup({
               className="chat-popup-panel chat-popup-panel--routine"
               role="dialog"
               aria-modal="true"
-              aria-label="AI 건강 멘토"
+              aria-label="AI 루틴 상담"
             >
               <header className="chat-popup-header">
                 <div className="chat-popup-header-brand">
-                  <span>AI 건강 멘토</span>
+                  <span>AI 루틴 상담</span>
                 </div>
                 <button
                   type="button"
@@ -76,11 +92,12 @@ export function RoutineChatFabPopup({
               </header>
               <div className="chat-popup-body chat-popup-body--routine">
                 <RoutineChatScreen
-                  routineId={routineId}
-                  chatId={chatId}
+                  chatId={resolvedChatId}
+                  routineSummary={routineSummary}
                   variant="popup"
-                  onBack={() => setOpen(false)}
-                  onRoutineUpdated={onRoutineUpdated}
+                  onClose={() => setOpen(false)}
+                  onRoutineUpdate={onRoutineUpdate}
+                  onChatIdResolved={handleChatIdResolved}
                 />
               </div>
             </div>

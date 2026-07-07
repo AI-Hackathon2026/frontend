@@ -1,193 +1,156 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { api, withAuthRetry } from "../../api/client";
 import { STARTER_PROMPTS } from "../../constants/routine";
-import { MarkdownContent } from "../MarkdownContent";
-import { TypingIndicator } from "../TypingIndicator";
-import type { RoutineChatMessage } from "../../types";
+import { useRoutineChat } from "../../hooks/useRoutineChat";
+import type { UpdatedRoutine } from "../../types/routine-chat.types";
+import {
+  RoutineChatTypingIndicator,
+  RoutineMessageBubble,
+} from "../chat/RoutineMessageBubble";
 
 interface Props {
-  routineId: string;
-  chatId: string;
+  chatId: string | null;
+  routineSummary?: string;
   variant?: "page" | "popup";
-  onBack: () => void;
-  onRoutineUpdated: () => void;
-}
-
-interface DisplayMessage {
-  id: string;
-  role: "USER" | "AI";
-  text: string;
+  onClose: () => void;
+  onRoutineUpdate: (routine: UpdatedRoutine) => void;
+  onChatIdResolved?: (chatId: string) => void;
 }
 
 export function RoutineChatScreen({
   chatId,
+  routineSummary = "",
   variant = "page",
-  onBack,
-  onRoutineUpdated,
+  onClose,
+  onRoutineUpdate,
+  onChatIdResolved,
 }: Props) {
-  const [messages, setMessages] = useState<DisplayMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
+  const [inputText, setInputText] = useState("");
   const [toast, setToast] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    withAuthRetry(() => api.getRoutineChatMessages(chatId))
-      .then((data) => {
-        setMessages(
-          data.map((m: RoutineChatMessage) => ({
-            id: m.id,
-            role: m.role,
-            text: m.text,
-          })),
-        );
-      })
-      .catch((err) => {
-        setError(
-          err instanceof Error ? err.message : "메시지를 불러올 수 없습니다.",
-        );
-      })
-      .finally(() => setLoading(false));
-  }, [chatId]);
+  const { messages, loading, sending, error, sendMessage } = useRoutineChat({
+    chatId,
+    onRoutineUpdate: (routine) => {
+      onRoutineUpdate(routine);
+      setToast("루틴이 업데이트되었어요 ✅");
+      window.setTimeout(() => setToast(""), 4000);
+    },
+    onChatIdResolved,
+  });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
-  async function handleSend(event: FormEvent) {
-    event.preventDefault();
-    const text = input.trim();
-    if (!text || sending) return;
+  async function onSend(event?: FormEvent) {
+    event?.preventDefault();
+    if (!inputText.trim() || sending) return;
 
-    const tempId = `temp-${Date.now()}`;
-    setInput("");
-    setSending(true);
-    setError("");
-    setMessages((prev) => [
-      ...prev,
-      { id: tempId, role: "USER", text },
-    ]);
-
-    try {
-      const response = await withAuthRetry(() =>
-        api.sendRoutineChatMessage(chatId, text),
-      );
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `ai-${Date.now()}`,
-          role: "AI",
-          text: response.aiResponse,
-        },
-      ]);
-      if (response.routineUpdated) {
-        setToast("루틴이 업데이트되었습니다 ✅");
-        onRoutineUpdated();
-        window.setTimeout(() => setToast(""), 4000);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "메시지 전송 실패");
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setInput(text);
-    } finally {
-      setSending(false);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className={variant === "popup" ? "chat-popup-loading" : "routine-gate"}>
-        <div className="spinner" />
-        <p>채팅 불러오는 중...</p>
-      </div>
-    );
+    const text = inputText;
+    setInputText("");
+    await sendMessage(text);
   }
 
   return (
     <div className={`routine-chat${variant === "popup" ? " routine-chat--popup" : ""}`}>
-      {variant === "page" && (
-        <header className="routine-chat-header">
-          <button type="button" className="ghost-btn" onClick={onBack}>
-            ← 루틴으로
+      {variant === "page" ? (
+        <header className="routine-chat-header routine-chat-header--v2">
+          <button
+            type="button"
+            className="routine-chat-back-btn"
+            onClick={onClose}
+            aria-label="닫기"
+          >
+            ←
           </button>
-          <h2>AI 건강 멘토</h2>
+          <div className="routine-chat-header-copy">
+            <p className="routine-chat-header-title">AI 루틴 상담</p>
+            {routineSummary && (
+              <p className="routine-chat-header-subtitle">{routineSummary}</p>
+            )}
+          </div>
         </header>
+      ) : (
+        routineSummary && (
+          <p className="routine-chat-popup-summary">{routineSummary}</p>
+        )
       )}
 
       {toast && <div className="routine-toast">{toast}</div>}
       {error && <div className="banner-error">{error}</div>}
 
       <div className="routine-chat-messages">
-        {messages.length === 0 && (
-          <p className="muted routine-chat-empty">
-            루틴에 대해 궁금한 점을 물어보세요.
-          </p>
+        {loading && (
+          <p className="routine-chat-loading">대화 내용을 불러오는 중...</p>
         )}
-        {messages.map((msg) => {
-          const isUser = msg.role === "USER";
-          const isRoutineCard =
-            !isUser && msg.id === messages.find((m) => m.role === "AI")?.id;
-          return (
-            <div
-              key={msg.id}
-              className={`message-row ${isUser ? "user" : "ai"}`}
-            >
-              <div className="message-meta">
-                <span className="message-role">{isUser ? "나" : "AI"}</span>
-              </div>
-              <div
-                className={`message-bubble${isRoutineCard ? " routine-chat-routine-card" : ""}`}
-              >
-                {isUser ? msg.text : <MarkdownContent content={msg.text} />}
-              </div>
-            </div>
-          );
-        })}
-        {sending && (
-          <div className="message-row ai">
-            <div className="message-meta">
-              <span className="message-role">AI</span>
-            </div>
-            <div className="message-bubble">
-              <TypingIndicator />
+
+        {!loading && messages.length === 0 && (
+          <div className="routine-chat-starters-empty">
+            <p className="routine-chat-empty">
+              루틴에 대해 무엇이든 물어보세요
+            </p>
+            <div className="routine-chat-starters routine-chat-starters--center">
+              {STARTER_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="routine-starter-chip"
+                  disabled={sending}
+                  onClick={() => void sendMessage(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
             </div>
           </div>
         )}
+
+        {messages.map((message) => (
+          <RoutineMessageBubble key={message.id} message={message} />
+        ))}
+
+        {sending && <RoutineChatTypingIndicator />}
+
         <div ref={bottomRef} />
       </div>
 
-      <div className="routine-chat-starters">
-        {STARTER_PROMPTS.map((prompt) => (
-          <button
-            key={prompt}
-            type="button"
-            className="routine-starter-chip"
-            disabled={sending}
-            onClick={() => setInput(prompt)}
-          >
-            {prompt}
-          </button>
-        ))}
-      </div>
+      {messages.length > 0 && (
+        <div className="routine-chat-starters">
+          {STARTER_PROMPTS.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              className="routine-starter-chip"
+              disabled={sending}
+              onClick={() => void sendMessage(prompt)}
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      )}
 
-      <form className="routine-chat-composer" onSubmit={(e) => void handleSend(e)}>
+      <form className="routine-chat-composer routine-chat-composer--v2" onSubmit={(e) => void onSend(e)}>
         <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="메시지를 입력하세요..."
-          rows={2}
-          disabled={sending}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && !sending) {
-              e.preventDefault();
-              void handleSend(e);
+          value={inputText}
+          onChange={(event) => setInputText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              void onSend();
             }
           }}
+          placeholder="루틴에 대해 물어보거나 조정을 요청하세요..."
+          rows={1}
+          disabled={sending || loading}
         />
-        <button type="submit" className="primary-btn" disabled={!input.trim() || sending}>
-          전송
+        <button
+          type="submit"
+          className="routine-chat-send-btn"
+          disabled={sending || loading || !inputText.trim()}
+          aria-label="전송"
+        >
+          ↑
         </button>
       </form>
     </div>

@@ -166,6 +166,30 @@ export interface RoutineProjection {
   HARD: number;
 }
 
+export interface CharacterStageInfo {
+  key?: string;
+  name: string;
+  emoji: string;
+}
+
+export interface CharacterProgress {
+  level: number;
+  xp: number;
+  xpInLevel: number;
+  xpToNext: number;
+  totalCompletions: number;
+  stage: CharacterStageInfo;
+}
+
+export interface PlanProgressUpdate {
+  id: string;
+  isCompleted: boolean;
+  progressionBar: number;
+  characterProgress: CharacterProgress;
+  leveledUp: boolean;
+  previousLevel: number;
+}
+
 export interface RoutineLog {
   id?: string;
   date: string;
@@ -197,11 +221,30 @@ export interface NutritionMeal {
   progressionBar: number;
 }
 
+export interface NutritionSummaryEntry {
+  key: string;
+  percent: number;
+}
+
 export interface NutritionRoutineDay {
   planId?: string;
   dayOfWeek?: string;
   dayNumber?: number;
   meals: NutritionMeal[];
+  averageCalories?: number;
+  nutritionSummary?: NutritionSummaryEntry[];
+}
+
+export interface RoutineInfoItem {
+  name: string;
+  tooltip: string;
+}
+
+export interface RoutineInfo {
+  reason: string;
+  nutrition: RoutineInfoItem[];
+  workout: RoutineInfoItem[];
+  sources: string[];
 }
 
 export interface Routine {
@@ -211,6 +254,8 @@ export interface Routine {
   summary: string;
   /** Markdown README: reasoning, risk reduction, references. */
   reportReadme: string;
+  /** Structured routine explanation from backend; null for legacy routines. */
+  routineInfo: RoutineInfo | null;
   title: string;
   nutritionPlan: string;
   workoutPlan: string;
@@ -220,6 +265,7 @@ export interface Routine {
   trackerCompleted?: boolean;
   logs?: RoutineLog[];
   chats?: RoutineChatSummary[];
+  characterProgress?: CharacterProgress;
 }
 
 export interface GenerateRoutineResult {
@@ -230,6 +276,7 @@ export interface GenerateRoutineResult {
 export interface RoutineChatResponse {
   aiResponse: string;
   routineUpdated: boolean;
+  routine?: import("./routine-chat.types").UpdatedRoutine;
 }
 
 export type Gender = "MALE" | "FEMALE";

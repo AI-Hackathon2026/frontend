@@ -53,9 +53,9 @@ export function buildHealthStatusRequest(form: HealthStatusFormState): HealthSta
     return null;
   }
 
-  if (age < 1 || age > 120) return null;
-  if (height < 50 || height > 250) return null;
-  if (weight < 20 || weight > 300) return null;
+  if (age < 19 || age > 100) return null;
+  if (height < 100 || height > 250) return null;
+  if (weight < 20 || weight > 250) return null;
   if (alcoholFreq < 0 || alcoholFreq > 7) return null;
   if (smokeFreq < 0 || smokeFreq > 7) return null;
   if (exerciseFreq < 0 || exerciseFreq > 7) return null;

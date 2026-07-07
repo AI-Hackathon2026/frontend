@@ -13,7 +13,6 @@ import { AdminTab } from "./AdminTab";
 import { HealthStatusForm } from "./routine/HealthStatusForm";
 import { RoutineTab } from "./routine/RoutineTab";
 import { MainLayout } from "./MainLayout";
-import { HeAIthLogo } from "./HeAIthLogo";
 import { ScreenTransition } from "./ScreenTransition";
 import { isAdminRole } from "../utils/authRole";
 
@@ -108,12 +107,6 @@ export function AppShell() {
     if (!isAdmin && healthGate === "required") {
       return (
         <div className="health-status-gate">
-          <header className="health-status-gate-header">
-            <HeAIthLogo size="sm" />
-            <p className="health-status-gate-intro">
-              맞춤 건강 루틴을 위해 먼저 건강 정보를 입력해 주세요.
-            </p>
-          </header>
           <HealthStatusForm onComplete={() => setHealthGate("ready")} />
         </div>
       );

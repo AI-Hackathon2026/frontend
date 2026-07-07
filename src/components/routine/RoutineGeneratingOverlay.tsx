@@ -6,9 +6,7 @@ interface Props {
   mode?: "create" | "change";
 }
 
-const DEFAULT_TITLE =
-  "잠시만 기다려 주세요! </br> AI가 회원님을 위한 건강 루틴을 생성 중입니다";
-
+const DEFAULT_TITLE = "잠시만 기다려 주세요!\nAI가 회원님을 위한 건강 루틴을 생성 중입니다";
 const CREATE_STEPS = [
   "건강 데이터를 분석하고 있어요",
   "KNHANES 기준을 적용하고 있어요",
@@ -76,7 +74,6 @@ export function RoutineGeneratingOverlay({
         <p className="routine-generating-title routine-generating-title--friendly">
           {title}
         </p>
-
         <p
           className={`routine-generating-step${stepVisible ? " is-visible" : ""}`}
           key={stepIndex}

@@ -1,17 +1,15 @@
-import type { Gender, RoutineDifficulty } from "../../../types";
-import type { RoutineProgress } from "../../../utils/routineProgress";
-import { RoutineAvatar } from "../RoutineAvatar";
-import { RoutineCharacter } from "../RoutineCharacter";
+import { DIFFICULTY_LABELS } from "../../../constants/routine";
+import type { RoutineDifficulty } from "../../../types";
+import type { AvatarData } from "../../../utils/avatarData";
+import { AvatarCard } from "../../avatar/AvatarCard";
 import { DifficultyBadge } from "./DifficultyBadge";
 
 interface Props {
   difficulty: RoutineDifficulty;
   summary: string;
   hasInfo: boolean;
-  progress: RoutineProgress;
-  gender: Gender;
-  bmi: number;
-  obesityRate: number;
+  avatar: AvatarData;
+  leveledUp?: boolean;
   onHealthRecord: () => void;
   onOpenInfo: () => void;
 }
@@ -20,10 +18,8 @@ export function RoutineViewHeader({
   difficulty,
   summary,
   hasInfo,
-  progress,
-  gender,
-  bmi,
-  obesityRate,
+  avatar,
+  leveledUp = false,
   onHealthRecord,
   onOpenInfo,
 }: Props) {
@@ -44,39 +40,22 @@ export function RoutineViewHeader({
       </div>
 
       <div className="routine-v2-header-hero">
-        <div className="routine-v2-header-avatar">
-          <RoutineAvatar
-            gender={gender}
-            bmi={bmi}
-            obesityRate={obesityRate}
-            progress={progress}
-            size="lg"
-          />
-        </div>
-        <div className="routine-v2-header-hero-meta">
-          <RoutineCharacter
-            progress={progress}
-            gender={gender}
-            bmi={bmi}
-            obesityRate={obesityRate}
-            showAvatar={false}
-          />
-          {summary && (
-            <div className="routine-v2-header-summary-row">
-              <p className="routine-v2-header-summary">{summary}</p>
-              {hasInfo && (
-                <button
-                  type="button"
-                  className="routine-v2-info-btn"
-                  aria-label="루틴 설명 보기"
-                  onClick={onOpenInfo}
-                >
-                  ⓘ
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        <AvatarCard
+          avatar={avatar}
+          routineSummary={summary}
+          difficulty={DIFFICULTY_LABELS[difficulty]}
+          leveledUp={leveledUp}
+        />
+        {hasInfo && (
+          <button
+            type="button"
+            className="routine-v2-info-btn routine-v2-info-btn--hero"
+            aria-label="루틴 설명 보기"
+            onClick={onOpenInfo}
+          >
+            ⓘ
+          </button>
+        )}
       </div>
     </header>
   );

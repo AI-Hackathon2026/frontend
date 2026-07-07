@@ -18,7 +18,6 @@ const CHANGE_HINT = "업데이트된 루틴으로 이번 주도 파이팅!";
 const FEATURES = [
   { icon: "🥗", label: "맞춤 영양 플랜" },
   { icon: "💪", label: "맞춤 운동 플랜" },
-  { icon: "📈", label: "KNHANES 기반 분석" },
 ];
 
 export function RoutineReadyOverlay({
@@ -69,9 +68,6 @@ export function RoutineReadyOverlay({
             bpm={30}
             className="routine-ready-pulse"
           />
-          <span className="routine-ready-sync-badge" aria-hidden>
-            SYNC
-          </span>
         </div>
 
         <p className="routine-ready-eyebrow">ROUTINE READY</p>

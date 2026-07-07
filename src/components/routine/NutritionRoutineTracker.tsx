@@ -1,12 +1,10 @@
-import { useState } from "react";
-import {
-  MEAL_TYPE_ICONS,
-  MEAL_TYPE_LABELS,
-  MEAL_TYPE_ORDER,
-} from "../../constants/routine";
+import { useEffect, useMemo, useState } from "react";
+import { MEAL_TYPE_ORDER } from "../../constants/routine";
 import type { MealType, NutritionMeal, NutritionRoutineDay } from "../../types";
+import { getCurrentMealType } from "../../utils/nutritionSummary";
 import { DayNavigation } from "./view/DayNavigation";
 import { MealSection } from "./view/MealSection";
+import { NutritionSummaryCard } from "./view/NutritionSummaryCard";
 
 interface Props {
   days: NutritionRoutineDay[];
@@ -29,9 +27,14 @@ function groupMealsByType(meals: NutritionMeal[]) {
   }));
 }
 
-function mealItemTitle(meal: NutritionMeal) {
-  if (meal.foods.length === 0) return "메뉴 정보 없음";
-  return meal.foods.join(", ");
+function defaultExpandedMealKey(
+  dayNumber: number,
+  mealGroups: { mealType: MealType }[],
+): string | null {
+  const currentMeal = getCurrentMealType();
+  if (!currentMeal) return null;
+  if (!mealGroups.some((group) => group.mealType === currentMeal)) return null;
+  return `${dayNumber}-${currentMeal}`;
 }
 
 export function NutritionRoutineTracker({
@@ -40,60 +43,63 @@ export function NutritionRoutineTracker({
   onToggle,
 }: Props) {
   const [dayIndex, setDayIndex] = useState(0);
-  const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
 
-  const totalMeals = days.reduce((sum, day) => sum + day.meals.length, 0);
+  const safeIndex = Math.min(Math.max(0, dayIndex), Math.max(0, days.length - 1));
+  const day = days[safeIndex];
+  const dayNumber = day?.dayNumber ?? safeIndex + 1;
+  const mealGroups = useMemo(
+    () => groupMealsByType(day?.meals ?? []),
+    [day?.meals],
+  );
+
+  const [expandedMeal, setExpandedMeal] = useState<string | null>(() =>
+    defaultExpandedMealKey(dayNumber, mealGroups),
+  );
+
+  useEffect(() => {
+    setExpandedMeal(defaultExpandedMealKey(dayNumber, mealGroups));
+  }, [dayNumber, mealGroups]);
+
+  const totalMeals = days.reduce((sum, d) => sum + d.meals.length, 0);
   if (totalMeals === 0) {
     return <p className="routine-v2-empty">등록된 영양 루틴이 없습니다.</p>;
   }
 
-  const safeIndex = Math.min(Math.max(0, dayIndex), days.length - 1);
-  const day = days[safeIndex];
-  const dayNumber = day.dayNumber ?? safeIndex + 1;
-  const mealGroups = groupMealsByType(day.meals);
-
   return (
-    <div className="routine-v2-day-view">
+    <div className="routine-v2-day-view routine-nutrition-view">
       <DayNavigation
         currentIndex={safeIndex}
         totalDays={days.length}
-        onChange={(index) => {
-          setDayIndex(index);
-          setExpandedMeal(null);
-        }}
+        onChange={setDayIndex}
       />
 
-      <div className="routine-v2-day-card">
+      <NutritionSummaryCard
+        averageCalories={day!.averageCalories}
+        nutritionSummary={day!.nutritionSummary}
+        meals={day!.meals}
+      />
+
+      <div className="routine-nutrition-meals-divider" role="separator" />
+
+      <p className="routine-nutrition-summary-sec-label">
+        {dayNumber}일차 식단
+      </p>
+
+      <div className="routine-nutrition-meals">
         {mealGroups.map(({ mealType, meals }) => {
           const mealKey = `${dayNumber}-${mealType}`;
-          const mealLabel = MEAL_TYPE_LABELS[mealType] ?? mealType;
-          const mealIcon = MEAL_TYPE_ICONS[mealType] ?? "🍽";
 
           return (
             <MealSection
               key={mealKey}
-              icon={mealIcon}
-              label={mealLabel}
+              mealType={mealType}
+              meals={meals}
               expanded={expandedMeal === mealKey}
-              onToggle={() =>
+              onToggleExpand={() =>
                 setExpandedMeal((prev) => (prev === mealKey ? null : mealKey))
               }
-              tasks={meals.map((meal, mealIndex) => ({
-                id: meal.planId || `${mealKey}-${mealIndex}`,
-                name: mealItemTitle(meal),
-                completed: meal.isCompleted,
-                badge:
-                  meal.calories > 0
-                    ? `${meal.calories.toLocaleString()} kcal`
-                    : undefined,
-                disabled:
-                  updatingPlanId === meal.planId ||
-                  !meal.planId ||
-                  !onToggle,
-                onToggle: () => {
-                  if (meal.planId) onToggle?.(meal.planId, meal.isCompleted);
-                },
-              }))}
+              updatingPlanId={updatingPlanId}
+              onToggleMeal={onToggle}
             />
           );
         })}

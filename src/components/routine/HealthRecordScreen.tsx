@@ -1,22 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, withAuthRetry } from "../../api/client";
-import {
-  DISEASE_LABELS,
-  DISEASE_ORDER,
-  getRiskColor,
-  type DiseaseKey,
-} from "../../constants/routine";
+import { DISEASE_LABELS } from "../../constants/routine";
 import type { HealthRecord, HealthStatus } from "../../types";
 import {
-  getAlcoholInsight,
-  getBmiInsight,
-  getSmokingInsight,
-  insightSeverityColor,
-  insightSeverityLabel,
-  type HealthInsight,
-} from "../../utils/healthInsights";
+  getDiseaseDescription,
+  getDiseaseFooterValue,
+  getDiseaseRateLabel,
+} from "../../utils/disease-description";
+import {
+  DASHBOARD_DISEASE_ORDER,
+  getRiskBarWidth,
+  getRiskLevel,
+} from "../../utils/risk-level";
 import { hasRoutineData } from "../../utils/routineData";
-import { HealthRankingHero } from "./HealthRankingHero";
+import { DiseaseCard } from "./healthDashboard/DiseaseCard";
+import { ScoreCard } from "./healthDashboard/ScoreCard";
 
 interface Props {
   fromGate?: boolean;
@@ -24,70 +22,6 @@ interface Props {
   onRoutineStartClick: () => Promise<void>;
   onBack?: () => void;
   onUpdateHealthStatus?: () => void;
-}
-
-type RiskCard =
-  | {
-      key: DiseaseKey;
-      label: string;
-      kind: "insight";
-      insight: HealthInsight;
-    }
-  | {
-      key: DiseaseKey;
-      label: string;
-      kind: "rate";
-      rate: number;
-    };
-
-function buildRiskCards(
-  record: HealthRecord,
-  healthStatus: HealthStatus | null,
-): RiskCard[] {
-  return DISEASE_ORDER.map((key) => {
-    const label = DISEASE_LABELS[key];
-    const rate = record.exposureRates[key as DiseaseKey] ?? 0;
-
-    if (key === "SMOKING" && healthStatus) {
-      return {
-        key,
-        label,
-        kind: "insight" as const,
-        insight: getSmokingInsight(healthStatus.smokeFreq),
-      };
-    }
-
-    if (key === "ALCOHOL" && healthStatus) {
-      return {
-        key,
-        label,
-        kind: "insight" as const,
-        insight: getAlcoholInsight(healthStatus.alcoholFreq),
-      };
-    }
-
-    if (key === "OBESITY" && healthStatus) {
-      return {
-        key,
-        label,
-        kind: "insight" as const,
-        insight: getBmiInsight(
-          record.bmi,
-          healthStatus.height,
-          healthStatus.weight,
-        ),
-      };
-    }
-
-    return { key, label, kind: "rate" as const, rate };
-  });
-}
-
-function riskLevel(rate: number) {
-  if (rate >= 50) return "critical";
-  if (rate >= 20) return "warning";
-  if (rate > 0) return "caution";
-  return "safe";
 }
 
 export function HealthRecordScreen({
@@ -132,54 +66,93 @@ export function HealthRecordScreen({
       .finally(() => setLoading(false));
   }, [refreshKey]);
 
-  const riskCards = useMemo(
-    () => (record ? buildRiskCards(record, healthStatus) : []),
-    [record, healthStatus],
-  );
+  const exposureRates = record?.exposureRates ?? {};
 
-  const sortedRateCards = useMemo(
-    () =>
-      [...riskCards].sort((a, b) => {
-        const score = (card: RiskCard) =>
-          card.kind === "rate"
-            ? card.rate
-            : card.insight.severity === "critical"
-              ? 100
-              : card.insight.severity === "warning"
-                ? 70
-                : card.insight.severity === "caution"
-                  ? 40
-                  : 0;
-        return score(b) - score(a);
-      }),
-    [riskCards],
-  );
+  const goodDiseases = useMemo(() => {
+    if (!record) return [];
+    return DASHBOARD_DISEASE_ORDER.filter(
+      (disease) =>
+        getRiskLevel(
+          disease,
+          exposureRates[disease] ?? 0,
+          healthStatus ?? undefined,
+        ) === "GOOD",
+    ).map((disease) => DISEASE_LABELS[disease]);
+  }, [record, exposureRates, healthStatus]);
+
+  const diseaseCards = useMemo(() => {
+    if (!record) return [];
+
+    const context = healthStatus
+      ? {
+          smokeFreq: healthStatus.smokeFreq,
+          alcoholFreq: healthStatus.alcoholFreq,
+          weight: healthStatus.weight,
+          height: healthStatus.height,
+        }
+      : undefined;
+
+    return DASHBOARD_DISEASE_ORDER.map((disease) => {
+      const rate = exposureRates[disease] ?? 0;
+      const riskLevel = getRiskLevel(disease, rate, healthStatus ?? undefined);
+      const barWidth = getRiskBarWidth(disease, rate, healthStatus ?? undefined);
+      const rateLabel = getDiseaseRateLabel(disease, rate, healthStatus ?? undefined);
+      const description = getDiseaseDescription(
+        disease,
+        rate,
+        riskLevel,
+        context,
+      );
+      const footerValue = getDiseaseFooterValue(
+        disease,
+        rate,
+        rateLabel,
+        riskLevel,
+      );
+
+      return {
+        key: disease,
+        name: DISEASE_LABELS[disease],
+        rateLabel,
+        footerValue,
+        description,
+        riskLevel,
+        barWidth,
+      };
+    });
+  }, [record, exposureRates, healthStatus]);
 
   if (loading) {
     return (
-      <div className="routine-gate">
-        <div className="spinner" />
-        <p>건강 현황 불러오는 중...</p>
+      <div className="health-dashboard-page">
+        <div className="health-dashboard-loading">
+          <div className="spinner" />
+          <p>건강 현황 불러오는 중...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !record) {
     return (
-      <div className="routine-page health-dashboard">
+      <div className="health-dashboard-page">
         <div className="banner-error">{error || "데이터 없음"}</div>
-        <div className="health-dashboard-actions">
+        <div className="health-dashboard-btn-row">
           {onUpdateHealthStatus && (
             <button
               type="button"
-              className="primary-btn routine-cta-btn"
+              className="health-dashboard-btn health-dashboard-btn--primary"
               onClick={onUpdateHealthStatus}
             >
               건강 정보 입력하기
             </button>
           )}
           {onBack && (
-            <button type="button" className="ghost-btn" onClick={onBack}>
+            <button
+              type="button"
+              className="health-dashboard-btn health-dashboard-btn--secondary"
+              onClick={onBack}
+            >
               돌아가기
             </button>
           )}
@@ -189,131 +162,80 @@ export function HealthRecordScreen({
   }
 
   return (
-    <div className="routine-page health-dashboard">
-      <section className="health-dashboard-panel">
-        <header className="health-dashboard-header">
-          <div>
-            <p className="health-dashboard-eyebrow">Health Intelligence</p>
-            <h2>내 건강 현황</h2>
-          </div>
-          {!fromGate && onBack && (
-            <button
-              type="button"
-              className="routine-future-btn routine-future-btn--ghost"
-              onClick={onBack}
-            >
-              돌아가기
-            </button>
-          )}
-        </header>
-
-        <HealthRankingHero record={record} />
-
-        <div className="health-dashboard-risks">
-          <div className="health-dashboard-risks-head">
-            <h3>질환 노출 위험도</h3>
-            <span className="health-dashboard-risks-sub">동연령 대비 · KNHANES</span>
-          </div>
-
-          <ul className="health-risk-grid">
-            {sortedRateCards.map((card) => {
-              if (card.kind === "insight") {
-                const { insight } = card;
-                const color = insightSeverityColor(insight.severity);
-                return (
-                  <li
-                    key={card.key}
-                    className={`health-risk-card health-risk-card--${insight.severity}`}
-                  >
-                    <div className="health-risk-card-top">
-                      <span className="health-risk-card-label">{card.label}</span>
-                      <span
-                        className="health-risk-card-value health-risk-card-value--status"
-                        style={{ color }}
-                      >
-                        {insight.status}
-                      </span>
-                    </div>
-                    <p className="health-risk-card-detail">{insight.detail}</p>
-                    <span
-                      className="health-risk-card-flag"
-                      style={{ color }}
-                    >
-                      {insightSeverityLabel(insight.severity)}
-                    </span>
-                  </li>
-                );
-              }
-
-              const level = riskLevel(card.rate);
-              return (
-                <li
-                  key={card.key}
-                  className={`health-risk-card health-risk-card--${level}`}
-                >
-                  <div className="health-risk-card-top">
-                    <span className="health-risk-card-label">{card.label}</span>
-                    <span
-                      className="health-risk-card-value"
-                      style={{ color: getRiskColor(card.rate) }}
-                    >
-                      {card.rate.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="health-risk-card-track">
-                    <div
-                      className="health-risk-card-fill"
-                      style={{
-                        width: `${Math.min(card.rate, 100)}%`,
-                        background: `linear-gradient(90deg, ${getRiskColor(card.rate)}aa, ${getRiskColor(card.rate)})`,
-                        boxShadow: `0 0 12px ${getRiskColor(card.rate)}55`,
-                      }}
-                    />
-                  </div>
-                  {level === "critical" || level === "warning" ? (
-                    <span className="health-risk-card-flag">주의 필요</span>
-                  ) : level === "safe" ? (
-                    <span className="health-risk-card-flag health-risk-card-flag--safe">
-                      양호
-                    </span>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-
-          <p className="health-dashboard-source">
-            출처: 질병관리청 2024 국민건강영양조사
-          </p>
+    <div className="health-dashboard-page">
+      <header className="health-dashboard-header">
+        <div>
+          <p className="health-dashboard-eyebrow">Health Intelligence</p>
+          <h1 className="health-dashboard-title">내 건강 현황</h1>
         </div>
-
-        <div className="health-dashboard-actions">
-          {onUpdateHealthStatus && (
-            <button
-              type="button"
-              className="routine-future-btn"
-              onClick={onUpdateHealthStatus}
-            >
-              건강 정보 수정
-            </button>
-          )}
+        {!fromGate && onBack && (
           <button
             type="button"
-            className="routine-future-btn routine-future-btn--primary"
-            disabled={starting}
-            onClick={() => {
-              setStarting(true);
-              void onRoutineStartClick().finally(() => setStarting(false));
-            }}
+            className="health-dashboard-btn health-dashboard-btn--secondary health-dashboard-btn--compact"
+            onClick={onBack}
           >
-            {starting
-              ? "확인 중..."
-              : hasRoutine
-                ? "내 루틴 보기 →"
-                : "루틴 시작하기 →"}
+            돌아가기
           </button>
-        </div>
-      </section>
+        )}
+      </header>
+
+      <ScoreCard
+        record={record}
+        goodDiseases={goodDiseases}
+        gender={healthStatus?.gender}
+        age={healthStatus?.age}
+      />
+
+      <div className="health-dashboard-section-head">
+        <h2 className="health-dashboard-section-title">질환 노출 위험도</h2>
+        <span className="health-dashboard-section-note">동연령 대비 · KNHANES</span>
+      </div>
+
+      <ul className="health-disease-grid">
+        {diseaseCards.map((card) => (
+          <DiseaseCard
+            key={card.key}
+            name={card.name}
+            rateLabel={card.rateLabel}
+            footerValue={card.footerValue}
+            description={card.description}
+            riskLevel={card.riskLevel}
+            barWidth={card.barWidth}
+          />
+        ))}
+      </ul>
+
+      <p className="health-dashboard-source">
+        출처: 질병관리청 2024 국민건강영양조사
+      </p>
+
+      <div className="health-dashboard-btn-row">
+        {onUpdateHealthStatus && (
+          <button
+            type="button"
+            className="health-dashboard-btn health-dashboard-btn--secondary"
+            onClick={onUpdateHealthStatus}
+          >
+            <i className="ti ti-pencil" aria-hidden />
+            건강 정보 수정
+          </button>
+        )}
+        <button
+          type="button"
+          className="health-dashboard-btn health-dashboard-btn--primary"
+          disabled={starting}
+          onClick={() => {
+            setStarting(true);
+            void onRoutineStartClick().finally(() => setStarting(false));
+          }}
+        >
+          {starting
+            ? "확인 중..."
+            : hasRoutine
+              ? "내 루틴 보기 →"
+              : "루틴 시작하기 →"}
+        </button>
+      </div>
     </div>
   );
 }

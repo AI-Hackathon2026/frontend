@@ -1,26 +1,70 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api, withAuthRetry } from "../../api/client";
-import type { Gender } from "../../types";
 import {
   buildHealthStatusRequest,
   healthStatusToFormState,
+  parseRequiredInt,
   type HealthStatusFormState,
 } from "../../utils/healthstatus";
+import { HeAIthLogo } from "../HeAIthLogo";
+import { BmiCard } from "./healthForm/BmiCard";
+import { GenderToggle } from "./healthForm/GenderToggle";
+import { LifestyleSlider } from "./healthForm/LifestyleSlider";
+import { StepIndicator } from "./healthForm/StepIndicator";
 
 const INITIAL_FORM: HealthStatusFormState = {
   gender: "",
   age: "",
   height: "",
   weight: "",
-  alcoholFreq: "",
-  smokeFreq: "",
-  exerciseFreq: "",
+  alcoholFreq: "0",
+  smokeFreq: "0",
+  exerciseFreq: "0",
 };
 
 interface Props {
   mode?: "create" | "update";
   onComplete: () => void;
   onCancel?: () => void;
+}
+
+function NumberField({
+  label,
+  optional,
+  value,
+  onChange,
+  placeholder,
+  min,
+  max,
+}: {
+  label: string;
+  optional?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  min: number;
+  max: number;
+}) {
+  return (
+    <label className="health-form-field">
+      <span className="health-form-field-label">
+        {label}
+        {optional && (
+          <span className="health-form-field-optional"> (선택)</span>
+        )}
+      </span>
+      <input
+        type="number"
+        className="health-form-input"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        min={min}
+        max={max}
+        required={!optional}
+      />
+    </label>
+  );
 }
 
 export function HealthStatusForm({
@@ -66,6 +110,14 @@ export function HealthStatusForm({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  const bmiReady = useMemo(() => {
+    if (!form.gender) return false;
+    const age = parseRequiredInt(form.age);
+    const height = parseRequiredInt(form.height);
+    const weight = parseRequiredInt(form.weight);
+    return !!(age && height && weight);
+  }, [form.age, form.gender, form.height, form.weight]);
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -78,7 +130,7 @@ export function HealthStatusForm({
     const body = buildHealthStatusRequest(form);
     if (!body) {
       setError(
-        "모든 항목을 올바르게 입력해 주세요. (나이 1–120, 키·몸무게·생활습관 빈도는 정수)",
+        "모든 항목을 올바르게 입력해 주세요. (나이 19–100, 키·몸무게·생활습관 빈도 확인)",
       );
       return;
     }
@@ -107,8 +159,8 @@ export function HealthStatusForm({
 
   if (fetching) {
     return (
-      <div className="routine-page">
-        <div className="routine-gate">
+      <div className="health-form-page">
+        <div className="health-form-loading">
           <div className="spinner" />
           <p>건강 정보 불러오는 중...</p>
         </div>
@@ -116,144 +168,131 @@ export function HealthStatusForm({
     );
   }
 
+  const ageNum = parseRequiredInt(form.age);
+  const heightNum = parseRequiredInt(form.height);
+  const weightNum = parseRequiredInt(form.weight);
+
   return (
-    <div className="routine-page">
-      <section className="routine-section">
-        <div className="routine-section-header">
-          <h2>{mode === "update" ? "건강 정보 수정" : "건강 정보 입력"}</h2>
-          {mode === "update" && onCancel && (
+    <div className="health-form-page">
+      <div className="health-form-logo">
+        <HeAIthLogo size="md" />
+      </div>
+      <p className="health-form-subtitle">
+        {mode === "update"
+          ? "건강 정보를 수정하면 건강 점수와 루틴 추천이 다시 계산됩니다."
+          : "맞춤 건강 루틴을 위해 정보를 입력해 주세요."}
+      </p>
+
+      {mode === "create" ? (
+        <StepIndicator
+          current={2}
+          total={3}
+          labels={["회원가입", "건강 정보", "루틴 선택"]}
+        />
+      ) : (
+        <div className="health-form-update-header">
+          <h2>건강 정보 수정</h2>
+          {onCancel && (
             <button type="button" className="ghost-btn" onClick={onCancel}>
               취소
             </button>
           )}
         </div>
-        <p className="section-desc">
-          {mode === "update"
-            ? "건강 정보를 수정하면 건강 점수와 루틴 추천이 다시 계산됩니다."
-            : "KNHANES 기반 맞춤 루틴을 위해 건강 정보를 입력해 주세요."}
+      )}
+
+      {error && <div className="banner-error health-form-error">{error}</div>}
+
+      <form className="health-form" onSubmit={(e) => void handleSubmit(e)}>
+        <p className="health-form-section-label">기본 정보</p>
+
+        <GenderToggle
+          value={form.gender}
+          onChange={(gender) => updateField("gender", gender)}
+        />
+
+        <NumberField
+          label="나이"
+          value={form.age}
+          onChange={(v) => updateField("age", v)}
+          placeholder="예: 35"
+          min={19}
+          max={100}
+        />
+
+        <div className="health-form-row">
+          <NumberField
+            label="키 (cm)"
+            value={form.height}
+            onChange={(v) => updateField("height", v)}
+            placeholder="175"
+            min={100}
+            max={250}
+          />
+          <NumberField
+            label="몸무게 (kg)"
+            value={form.weight}
+            onChange={(v) => updateField("weight", v)}
+            placeholder="70"
+            min={20}
+            max={250}
+          />
+        </div>
+
+        {bmiReady && ageNum && heightNum && weightNum && form.gender && (
+          <BmiCard
+            weight={weightNum}
+            height={heightNum}
+            gender={form.gender}
+            age={ageNum}
+          />
+        )}
+
+        <div className="health-form-divider" />
+
+        <p className="health-form-section-label">생활 습관</p>
+        <p className="health-form-section-desc">
+          지난 1주 기준 해당 일수를 선택해 주세요.
         </p>
 
-        {error && <div className="banner-error">{error}</div>}
+        <LifestyleSlider
+          label="운동"
+          subLabel="유산소, 근력 운동 포함"
+          icon="ti-run"
+          iconClassName="health-form-slider-icon--teal"
+          value={parseRequiredInt(form.exerciseFreq) ?? 0}
+          onChange={(v) => updateField("exerciseFreq", String(v))}
+        />
+        <LifestyleSlider
+          label="음주"
+          subLabel="음주한 날 기준"
+          icon="ti-bottle"
+          value={parseRequiredInt(form.alcoholFreq) ?? 0}
+          onChange={(v) => updateField("alcoholFreq", String(v))}
+        />
+        <LifestyleSlider
+          label="흡연"
+          subLabel="흡연한 날 기준"
+          icon="ti-flame-off"
+          value={parseRequiredInt(form.smokeFreq) ?? 0}
+          onChange={(v) => updateField("smokeFreq", String(v))}
+        />
 
-        <form className="healthstatus-form" onSubmit={(e) => void handleSubmit(e)}>
-          <fieldset className="healthstatus-fieldset">
-            <legend>기본 정보</legend>
-            <div className="healthstatus-form-grid">
-              <label>
-                성별
-                <select
-                  value={form.gender}
-                  onChange={(e) =>
-                    updateField("gender", e.target.value as "" | Gender)
-                  }
-                  required
-                >
-                  <option value="">선택</option>
-                  <option value="MALE">남성</option>
-                  <option value="FEMALE">여성</option>
-                </select>
-              </label>
-              <label>
-                나이
-                <input
-                  type="number"
-                  min={1}
-                  max={120}
-                  step={1}
-                  value={form.age}
-                  onChange={(e) => updateField("age", e.target.value)}
-                  placeholder="42"
-                  required
-                />
-              </label>
-              <label>
-                키 (cm)
-                <input
-                  type="number"
-                  min={50}
-                  max={250}
-                  step={1}
-                  value={form.height}
-                  onChange={(e) => updateField("height", e.target.value)}
-                  placeholder="175"
-                  required
-                />
-              </label>
-              <label>
-                몸무게 (kg)
-                <input
-                  type="number"
-                  min={20}
-                  max={300}
-                  step={1}
-                  value={form.weight}
-                  onChange={(e) => updateField("weight", e.target.value)}
-                  placeholder="72"
-                  required
-                />
-              </label>
-            </div>
-          </fieldset>
+        <button
+          type="submit"
+          className="health-form-submit"
+          disabled={loading}
+        >
+          {loading
+            ? "저장 중..."
+            : mode === "update"
+              ? "건강 정보 업데이트"
+              : "저장하고 계속하기"}
+        </button>
 
-          <fieldset className="healthstatus-fieldset">
-            <legend>생활 습관 (주당 빈도)</legend>
-            <p className="healthstatus-field-hint">
-              0~7 — 지난 1주 기준 해당 일수
-            </p>
-            <div className="healthstatus-form-grid">
-              <label>
-                음주 (주당 일수)
-                <input
-                  type="number"
-                  min={0}
-                  max={7}
-                  step={1}
-                  value={form.alcoholFreq}
-                  onChange={(e) => updateField("alcoholFreq", e.target.value)}
-                  placeholder="2"
-                  required
-                />
-              </label>
-              <label>
-                흡연 (주당 일수)
-                <input
-                  type="number"
-                  min={0}
-                  max={7}
-                  step={1}
-                  value={form.smokeFreq}
-                  onChange={(e) => updateField("smokeFreq", e.target.value)}
-                  placeholder="0"
-                  required
-                />
-              </label>
-              <label>
-                운동 (주당 일수)
-                <input
-                  type="number"
-                  min={0}
-                  max={7}
-                  step={1}
-                  value={form.exerciseFreq}
-                  onChange={(e) => updateField("exerciseFreq", e.target.value)}
-                  placeholder="3"
-                  required
-                />
-              </label>
-            </div>
-          </fieldset>
-
-          <div className="healthstatus-form-actions">
-            <button type="submit" className="primary-btn" disabled={loading}>
-              {loading
-                ? "저장 중..."
-                : mode === "update"
-                  ? "건강 정보 업데이트"
-                  : "저장하고 계속하기"}
-            </button>
-          </div>
-        </form>
-      </section>
+        <p className="health-form-source">
+          KNHANES 국민건강영양조사 기반 분석 · 질병관리청 2024
+        </p>
+      </form>
     </div>
   );
 }

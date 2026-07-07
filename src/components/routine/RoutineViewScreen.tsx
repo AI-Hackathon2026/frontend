@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, withAuthRetry } from "../../api/client";
-import type { Gender, Routine, RoutineDifficulty } from "../../types";
+import type { CharacterProgress, Routine, RoutineDifficulty } from "../../types";
 import {
-  getDefaultAvatarProfile,
-  type AvatarProfile,
-} from "../../utils/avatarAppearance";
-import {
-  computeRoutineProgress,
-  countCompletedTasks,
-  type RoutineProgress,
-} from "../../utils/routineProgress";
+  avatarLevelIncreased,
+  defaultCharacterProgress,
+  reconcileCharacterProgress,
+  resolveCharacterProgressAfterTask,
+  toAvatarData,
+} from "../../utils/avatarData";
+import { mergeRoutinePreservingPlanOrder } from "../../utils/routinePlanOrder";
+import { applyUpdatedRoutine } from "../../utils/routineChatUpdate";
 import {
   daysUntilRoutineRefresh,
   getRoutineWeekAnchor,
@@ -17,14 +17,14 @@ import {
   resetRoutineWeekAnchor,
   simulateWeekElapsedForTest,
 } from "../../utils/routineWeek";
+import { LevelUpModal } from "../avatar/LevelUpModal";
 import { ExerciseRoutineTracker } from "./ExerciseRoutineTracker";
-import { LevelUpModal } from "./LevelUpModal";
 import { NutritionRoutineTracker } from "./NutritionRoutineTracker";
 import { RoutineGeneratingOverlay } from "./RoutineGeneratingOverlay";
 import { RoutineReadyOverlay } from "./RoutineReadyOverlay";
 import { RoutineChatFabPopup } from "./RoutineChatFabPopup";
 import { ProgressSummaryCard } from "./view/ProgressSummaryCard";
-import { RoutineInfoSheet } from "./view/RoutineInfoSheet";
+import { RoutineInfoModal } from "./RoutineInfoModal";
 import { RoutinePlanTabBar } from "./view/RoutinePlanTabBar";
 import { RoutineViewHeader } from "./view/RoutineViewHeader";
 
@@ -48,8 +48,8 @@ export function RoutineViewScreen({
   onRoutineDeleted,
 }: Props) {
   const [routine, setRoutine] = useState<Routine | null>(null);
-  const [avatarProfile, setAvatarProfile] = useState<AvatarProfile>(
-    getDefaultAvatarProfile(),
+  const [characterProgress, setCharacterProgress] = useState<CharacterProgress>(
+    defaultCharacterProgress(),
   );
   const [activeTab, setActiveTab] = useState<RoutinePlanTab>("nutrition");
   const [infoOpen, setInfoOpen] = useState(false);
@@ -57,13 +57,26 @@ export function RoutineViewScreen({
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [updatingPlanId, setUpdatingPlanId] = useState<string | null>(null);
-  const [levelUp, setLevelUp] = useState<RoutineProgress | null>(null);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [levelUpTarget, setLevelUpTarget] = useState(1);
   const [weekOverlayPhase, setWeekOverlayPhase] = useState<
     "hidden" | "generating" | "ready"
   >("hidden");
   const [weekRefreshDifficulty, setWeekRefreshDifficulty] =
     useState<RoutineDifficulty | null>(null);
+  const [resolvedChatId, setResolvedChatId] = useState<string | undefined>(
+    initialChatId,
+  );
   const weekCheckDoneRef = useRef(false);
+  const routineRef = useRef(routine);
+  routineRef.current = routine;
+  const characterProgressRef = useRef(characterProgress);
+  characterProgressRef.current = characterProgress;
+
+  const avatar = useMemo(
+    () => toAvatarData(characterProgress),
+    [characterProgress],
+  );
 
   const refreshRoutineForNewWeek = useCallback(async (current: Routine) => {
     setWeekOverlayPhase("generating");
@@ -75,7 +88,12 @@ export function RoutineViewScreen({
       );
       resetRoutineWeekAnchor(current.id);
       const data = await withAuthRetry(() => api.getRoutineMe());
-      if (data) setRoutine(data);
+      if (data) {
+        setRoutine(data);
+        setCharacterProgress(
+          reconcileCharacterProgress(data.characterProgress, data),
+        );
+      }
       setWeekOverlayPhase("ready");
     } catch (err) {
       setError(
@@ -96,6 +114,10 @@ export function RoutineViewScreen({
   }, [routineId, refreshKey]);
 
   useEffect(() => {
+    setResolvedChatId(initialChatId ?? routine?.chats?.[0]?.id);
+  }, [initialChatId, routine?.chats, routineId, refreshKey]);
+
+  useEffect(() => {
     if (!routine?.id || weekCheckDoneRef.current) return;
     getRoutineWeekAnchor(routine.id);
     weekCheckDoneRef.current = true;
@@ -110,20 +132,16 @@ export function RoutineViewScreen({
 
     async function load() {
       try {
-        const [data, record, healthStatus] = await Promise.all([
-          withAuthRetry(() => api.getRoutineMe()),
-          withAuthRetry(() => api.getHealthRecordMe()),
-          withAuthRetry(() => api.getHealthStatus()),
-        ]);
-
+        const data = await withAuthRetry(() => api.getRoutineMe());
         setRoutine(data);
 
-        if (record || healthStatus) {
-          setAvatarProfile({
-            gender: (healthStatus?.gender ?? "MALE") as Gender,
-            bmi: record?.bmi ?? 23,
-            obesityRate: record?.exposureRates?.OBESITY ?? 0,
-          });
+        if (data) {
+          setCharacterProgress(
+            reconcileCharacterProgress(data.characterProgress, data),
+          );
+        } else {
+          const progress = await withAuthRetry(() => api.getCharacterMe());
+          setCharacterProgress(progress);
         }
       } catch (err) {
         setError(
@@ -139,16 +157,6 @@ export function RoutineViewScreen({
 
   const hasExerciseTracker = (routine?.exerciseRoutine?.length ?? 0) > 0;
   const hasNutritionTracker = (routine?.nutritionRoutine?.length ?? 0) > 0;
-
-  const taskCompletedCount = useMemo(
-    () => (routine ? countCompletedTasks(routine) : 0),
-    [routine],
-  );
-
-  const progress = useMemo(
-    () => computeRoutineProgress(taskCompletedCount),
-    [taskCompletedCount],
-  );
 
   const nutritionStats = useMemo(() => {
     const meals =
@@ -167,30 +175,65 @@ export function RoutineViewScreen({
     };
   }, [routine]);
 
-  async function refreshRoutineAfterTaskUpdate(wasCompleted: boolean) {
-    const prevProgress = computeRoutineProgress(
-      routine ? countCompletedTasks(routine) : 0,
-    );
+  function handleProgressReward(
+    previousLevel: number,
+    nextProgress: CharacterProgress,
+  ) {
+    setCharacterProgress(nextProgress);
 
+    if (!avatarLevelIncreased(previousLevel, nextProgress.level)) return;
+
+    setLevelUpTarget(nextProgress.level);
+    setShowLevelUp(true);
+  }
+
+  async function refreshRoutineAfterTaskUpdate(
+    wasCompleted: boolean,
+    reward?: {
+      leveledUp: boolean;
+      previousLevel: number;
+      characterProgress: CharacterProgress;
+    },
+  ) {
     const data = await withAuthRetry(() => api.getRoutineMe());
-    setRoutine(data);
+    const previousProgress = characterProgressRef.current;
+    const mergedRoutine = data
+      ? mergeRoutinePreservingPlanOrder(routineRef.current, data)
+      : null;
 
-    if (!wasCompleted && data) {
-      const newProgress = computeRoutineProgress(countCompletedTasks(data));
-      if (newProgress.level > prevProgress.level) {
-        setLevelUp(newProgress);
-      }
+    setRoutine(mergedRoutine);
+
+    if (!data || !mergedRoutine) return;
+
+    if (!wasCompleted && reward) {
+      const nextProgress = resolveCharacterProgressAfterTask(
+        reward.characterProgress,
+        mergedRoutine,
+        previousProgress,
+        data.characterProgress,
+      );
+
+      handleProgressReward(previousProgress.level, nextProgress);
+      return;
     }
+
+    setCharacterProgress(
+      reconcileCharacterProgress(
+        data.characterProgress,
+        mergedRoutine,
+        previousProgress,
+      ),
+    );
   }
 
   async function onToggleExercisePlan(planId: string, isCompleted: boolean) {
     setUpdatingPlanId(planId);
     setError("");
     try {
-      await withAuthRetry(() =>
+      const result = await withAuthRetry(() =>
         api.updateExercisePlanProgress(planId, !isCompleted),
       );
-      await refreshRoutineAfterTaskUpdate(isCompleted);
+      await refreshRoutineAfterTaskUpdate(isCompleted, result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "운동 루틴 저장 실패");
     } finally {
@@ -202,10 +245,10 @@ export function RoutineViewScreen({
     setUpdatingPlanId(planId);
     setError("");
     try {
-      await withAuthRetry(() =>
+      const result = await withAuthRetry(() =>
         api.updateNutritionPlanProgress(planId, !isCompleted),
       );
-      await refreshRoutineAfterTaskUpdate(isCompleted);
+      await refreshRoutineAfterTaskUpdate(isCompleted, result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "영양 루틴 저장 실패");
     } finally {
@@ -232,6 +275,8 @@ export function RoutineViewScreen({
       setActionLoading(false);
     }
   }
+
+  const dismissLevelUp = useCallback(() => setShowLevelUp(false), []);
 
   if (loading) {
     return (
@@ -264,32 +309,22 @@ export function RoutineViewScreen({
     );
   }
 
-  const activeChatId = initialChatId ?? routine?.chats?.[0]?.id;
+  const activeChatId = resolvedChatId ?? routine?.chats?.[0]?.id;
   const summaryText = routine.summary || routine.title;
-  const readme = routine.reportReadme?.trim() ?? "";
 
   return (
     <div className="routine-page routine-page--view routine-page--v2">
       {error && <div className="banner-error">{error}</div>}
 
-      {levelUp && (
-        <LevelUpModal
-          progress={levelUp}
-          gender={avatarProfile.gender}
-          bmi={avatarProfile.bmi}
-          obesityRate={avatarProfile.obesityRate}
-          onDismiss={() => setLevelUp(null)}
-        />
+      {showLevelUp && (
+        <LevelUpModal newLevel={levelUpTarget} onClose={dismissLevelUp} />
       )}
 
       <RoutineViewHeader
         difficulty={routine.difficulty}
         summary={summaryText}
-        hasInfo={Boolean(readme)}
-        progress={progress}
-        gender={avatarProfile.gender}
-        bmi={avatarProfile.bmi}
-        obesityRate={avatarProfile.obesityRate}
+        hasInfo={true}
+        avatar={avatar}
         onHealthRecord={onViewHealthRecord}
         onOpenInfo={() => setInfoOpen(true)}
       />
@@ -363,23 +398,32 @@ export function RoutineViewScreen({
         </button>
       </div>
 
-      <RoutineInfoSheet
+      <RoutineInfoModal
         open={infoOpen}
         onClose={() => setInfoOpen(false)}
-        content={readme}
+        routineInfo={routine.routineInfo}
+        summary={summaryText}
+        onRegenerate={() => onChangeDifficulty(routine.difficulty)}
       />
 
-      {activeChatId && (
-        <RoutineChatFabPopup
-          routineId={routine.id}
-          chatId={activeChatId}
-          onRoutineUpdated={() => {
-            void withAuthRetry(() => api.getRoutineMe()).then((data) => {
-              if (data) setRoutine(data);
-            });
-          }}
-        />
-      )}
+      <RoutineChatFabPopup
+        chatId={activeChatId ?? null}
+        routineSummary={summaryText}
+        avatarLevel={avatar.level}
+        onChatIdResolved={setResolvedChatId}
+        onRoutineUpdate={(updated) => {
+          setRoutine((prev) => (prev ? applyUpdatedRoutine(prev, updated) : prev));
+          void withAuthRetry(() => api.getRoutineMe()).then((data) => {
+            if (!data) return;
+            setRoutine((prev) =>
+              prev ? mergeRoutinePreservingPlanOrder(prev, data) : data,
+            );
+            if (data.characterProgress) {
+              setCharacterProgress(data.characterProgress);
+            }
+          });
+        }}
+      />
     </div>
   );
 }

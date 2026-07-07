@@ -16,14 +16,25 @@ import type {
   KnhanesQueryRequest,
   KnhanesQueryResponse,
   PdfFile,
+  PlanProgressUpdate,
   RagDocument,
   RoutineChatMessage,
-  RoutineChatResponse,
   RoutineDifficulty,
+  Routine,
   RoutineLog,
   RoutineProjection,
 } from "../types";
+import type {
+  EnsureRoutineChatResult,
+  RoutineChatResponse,
+  UpdatedRoutine,
+} from "../types/routine-chat.types";
 import type { DiseaseKey } from "../constants/routine";
+import {
+  extractCharacterProgress,
+  normalizeCharacterProgress,
+  normalizeCharacterProgressOrDefault,
+} from "../utils/characterNormalize";
 import { parseRoutineMeResponse } from "../utils/routineNormalize";
 
 import { apiUrl } from "./baseUrl";
@@ -285,6 +296,33 @@ function normalizeHealthStatus(raw: unknown): HealthStatus | null {
   };
 }
 
+function normalizePlanProgressUpdate(raw: unknown): PlanProgressUpdate {
+  const data = (raw ?? {}) as Record<string, unknown>;
+  const progress =
+    extractCharacterProgress(data) ??
+    normalizeCharacterProgress(data.characterProgress);
+
+  return {
+    id: String(data.id ?? ""),
+    isCompleted: Boolean(data.isCompleted),
+    progressionBar: Number(data.progressionBar ?? data.progressPercentage ?? 0) || 0,
+    characterProgress: progress ?? normalizeCharacterProgressOrDefault(null),
+    leveledUp: Boolean(data.leveledUp ?? data.leveled_up),
+    previousLevel: Number(data.previousLevel ?? data.previous_level ?? 0) || 0,
+  };
+}
+
+function attachCharacterProgress<T extends Routine>(
+  raw: unknown,
+  routine: T | null,
+): T | null {
+  if (!routine) return null;
+  const characterProgress =
+    routine.characterProgress ?? extractCharacterProgress(raw) ?? undefined;
+  if (!characterProgress) return routine;
+  return { ...routine, characterProgress };
+}
+
 function normalizeProjection(raw: unknown): RoutineProjection {
   const data = raw as Record<string, unknown>;
   if (typeof data.current === "number") {
@@ -385,6 +423,55 @@ function normalizeGenerateOrReplaceResult(raw: unknown): GenerateRoutineResult {
   }
 
   throw new Error("루틴 응답을 해석할 수 없습니다.");
+}
+
+function normalizeUpdatedRoutine(raw: unknown): UpdatedRoutine | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+
+  const data = raw as Record<string, unknown>;
+  const days = Array.isArray(data.days) ? data.days : [];
+  const id = String(data.id ?? data.routineId ?? "");
+  const summary = String(data.summary ?? data.report ?? "").trim();
+
+  if (!id && days.length === 0 && !summary) return undefined;
+
+  return {
+    id,
+    summary,
+    days,
+  };
+}
+
+function normalizeRoutineChatResponse(raw: unknown): RoutineChatResponse {
+  const data = (raw ?? {}) as Record<string, unknown>;
+  const routineUpdated = Boolean(data.routineUpdated ?? data.routine_updated);
+  const routine = routineUpdated
+    ? normalizeUpdatedRoutine(data.routine)
+    : undefined;
+
+  return {
+    aiResponse: String(
+      data.aiResponse ?? data.ai_response ?? data.message ?? "",
+    ),
+    routineUpdated,
+    routine,
+  };
+}
+
+function normalizeEnsureRoutineChatResult(raw: unknown): EnsureRoutineChatResult {
+  const data = (raw ?? {}) as Record<string, unknown>;
+  const chatId = String(
+    data.chatId ?? data.chat_id ?? data.id ?? "",
+  ).trim();
+  const routineId = String(
+    data.routineId ?? data.routine_id ?? "me",
+  ).trim();
+
+  if (!chatId) {
+    throw new Error("루틴 채팅방을 만들 수 없습니다.");
+  }
+
+  return { chatId, routineId };
 }
 
 function normalizeRoutineLog(raw: unknown): RoutineLog {
@@ -601,6 +688,17 @@ export const api = {
     );
   },
 
+  getCharacterMe() {
+    return requestOptional<unknown>("/users/me/character").then((raw) => {
+      const fromUser = normalizeCharacterProgress(raw);
+      if (fromUser) return fromUser;
+      return requestOptional<unknown>("/routines/me").then((routineRaw) => {
+        const fromRoutine = extractCharacterProgress(routineRaw);
+        return fromRoutine ?? normalizeCharacterProgressOrDefault(null);
+      });
+    });
+  },
+
   getHealthRecordProjection(disease: DiseaseKey) {
     return request<unknown>(
       `/health-records/me/projection?disease=${encodeURIComponent(disease)}`,
@@ -609,7 +707,7 @@ export const api = {
 
   getRoutineMe() {
     return requestOptional<unknown>("/routines/me").then((raw) =>
-      parseRoutineMeResponse(raw),
+      attachCharacterProgress(raw, parseRoutineMeResponse(raw)),
     );
   },
 
@@ -637,14 +735,14 @@ export const api = {
     return request<unknown>(`/routines/exercise-plans/${planId}/progress`, {
       method: "PATCH",
       body: JSON.stringify({ isCompleted }),
-    });
+    }).then((raw) => normalizePlanProgressUpdate(raw));
   },
 
   updateNutritionPlanProgress(planId: string, isCompleted: boolean) {
     return request<unknown>(`/routines/nutrition-plans/${planId}/progress`, {
       method: "PATCH",
       body: JSON.stringify({ isCompleted }),
-    });
+    }).then((raw) => normalizePlanProgressUpdate(raw));
   },
 
   async getChronicDiseaseProjections(diseases: DiseaseKey[]) {
@@ -671,10 +769,16 @@ export const api = {
   },
 
   sendRoutineChatMessage(chatId: string, text: string) {
-    return request<RoutineChatResponse>(`/routines/chat/${chatId}/message`, {
+    return request<unknown>(`/routines/chat/${chatId}/message`, {
       method: "POST",
       body: JSON.stringify({ text }),
-    });
+    }).then((raw) => normalizeRoutineChatResponse(raw));
+  },
+
+  ensureRoutineChat() {
+    return request<unknown>("/routines/me/chat", {
+      method: "POST",
+    }).then((raw) => normalizeEnsureRoutineChatResult(raw));
   },
 
   logRoutineCompletion(routineId: string, completed: boolean) {

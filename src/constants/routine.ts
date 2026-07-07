@@ -36,7 +36,7 @@ export const MEAL_TYPE_ORDER: MealType[] = [
 
 export const MEAL_TYPE_ICONS: Record<MealType, string> = {
   BREAKFAST: "🌅",
-  LUNCH: "☀️",
+  LUNCH: "🌞",
   DINNER: "🌙",
   SNACK: "🍎",
 };
@@ -229,7 +229,7 @@ export function getHighestRiskDisease(
 
 export const STARTER_PROMPTS = [
   "오늘 운동을 더 쉽게 바꿔줘",
-  "나트륨 줄이는 식단 팁 알려줘",
+  "점심 메뉴를 더 간단하게",
+  "나트륨을 줄이는 식단 팁 알려줘",
   "이 루틴에서 가장 중요한 게 뭐야?",
-  "이번 주 루틴 체크했어",
 ];
