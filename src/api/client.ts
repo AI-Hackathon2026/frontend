@@ -23,6 +23,7 @@ import type {
   Routine,
   RoutineLog,
   RoutineProjection,
+  HeroStyleKey,
 } from "../types";
 import type {
   EnsureRoutineChatResult,
@@ -697,6 +698,13 @@ export const api = {
         return fromRoutine ?? normalizeCharacterProgressOrDefault(null);
       });
     });
+  },
+
+  updateCharacterMe(body: { heroStyle?: HeroStyleKey }) {
+    return request<unknown>("/users/me/character", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((raw) => normalizeCharacterProgressOrDefault(raw));
   },
 
   getHealthRecordProjection(disease: DiseaseKey) {

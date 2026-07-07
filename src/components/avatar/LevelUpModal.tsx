@@ -5,17 +5,24 @@ import {
   LEVEL_COLORS,
   LEVEL_LABELS,
 } from "../../constants/avatar.constants";
+import { HERO_STYLES } from "../../constants/heroAvatar.constants";
 import { toAvatarLevel } from "../../utils/avatarData";
-import { AvatarSvg } from "./AvatarSvg";
+import { HeroAvatarSvg } from "./HeroAvatarSvg";
 
 interface LevelUpModalProps {
   newLevel: number;
+  heroStyleId?: number;
   onClose: () => void;
 }
 
-export function LevelUpModal({ newLevel, onClose }: LevelUpModalProps) {
+export function LevelUpModal({
+  newLevel,
+  heroStyleId = 0,
+  onClose,
+}: LevelUpModalProps) {
   const avatarLevel = toAvatarLevel(newLevel);
-  const color = LEVEL_COLORS[avatarLevel] ?? LEVEL_COLORS[1];
+  const hero = HERO_STYLES[heroStyleId] ?? HERO_STYLES[0];
+  const color = LEVEL_COLORS[avatarLevel] ?? hero.accent;
   const label = LEVEL_LABELS[avatarLevel] ?? LEVEL_LABELS[1];
   const badges = LEVEL_BADGES[avatarLevel] ?? [];
 
@@ -47,7 +54,12 @@ export function LevelUpModal({ newLevel, onClose }: LevelUpModalProps) {
         <p className="avatar-levelup-eyebrow">Level Up!</p>
 
         <div className="avatar-levelup-figure">
-          <AvatarSvg level={avatarLevel} size={140} animate />
+          <HeroAvatarSvg
+            level={avatarLevel}
+            heroStyle={heroStyleId}
+            size={140}
+            animate
+          />
         </div>
 
         <div className="avatar-levelup-text">

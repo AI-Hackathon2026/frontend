@@ -12,6 +12,7 @@ interface Props {
   leveledUp?: boolean;
   onHealthRecord: () => void;
   onOpenInfo: () => void;
+  onCharacterUpdated?: () => void;
 }
 
 export function RoutineViewHeader({
@@ -22,6 +23,7 @@ export function RoutineViewHeader({
   leveledUp = false,
   onHealthRecord,
   onOpenInfo,
+  onCharacterUpdated,
 }: Props) {
   return (
     <header className="routine-v2-header">
@@ -45,6 +47,7 @@ export function RoutineViewHeader({
           routineSummary={summary}
           difficulty={DIFFICULTY_LABELS[difficulty]}
           leveledUp={leveledUp}
+          onCharacterUpdated={onCharacterUpdated}
         />
         {hasInfo && (
           <button

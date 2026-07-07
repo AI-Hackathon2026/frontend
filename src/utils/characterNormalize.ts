@@ -1,5 +1,6 @@
 import { AVATAR_XP_PER_LEVEL } from "../constants/avatar.constants";
-import type { CharacterProgress } from "../types";
+import { isHeroStyleKey } from "../constants/heroAvatar.constants";
+import type { CharacterProgress, HeroStyleKey } from "../types";
 import { defaultCharacterProgress } from "./avatarData";
 
 function computeXpFields(xp: number) {
@@ -36,12 +37,20 @@ export function normalizeCharacterProgress(raw: unknown): CharacterProgress | nu
         }
       : { name: "새싹", emoji: "🌱" };
 
+  const heroStyleRaw = data.heroStyle ?? data.hero_style;
+  const heroStyle: HeroStyleKey = isHeroStyleKey(heroStyleRaw)
+    ? heroStyleRaw
+    : typeof heroStyleRaw === "string" && isHeroStyleKey(heroStyleRaw.toUpperCase())
+      ? (heroStyleRaw.toUpperCase() as HeroStyleKey)
+      : "IRON";
+
   return {
     level,
     xp,
     ...xpFields,
     totalCompletions: Number(data.totalCompletions ?? 0) || 0,
     stage,
+    heroStyle,
   };
 }
 

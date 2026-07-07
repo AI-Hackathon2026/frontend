@@ -77,6 +77,15 @@ export function RoutineViewScreen({
     [characterProgress],
   );
 
+  const refreshCharacterProgress = useCallback(async () => {
+    try {
+      const progress = await withAuthRetry(() => api.getCharacterMe());
+      setCharacterProgress(progress);
+    } catch {
+      // keep current progress on refresh failure
+    }
+  }, []);
+
   const refreshRoutineForNewWeek = useCallback(async (current: Routine) => {
     setWeekOverlayPhase("generating");
     setWeekRefreshDifficulty(current.difficulty);
@@ -316,7 +325,11 @@ export function RoutineViewScreen({
       {error && <div className="banner-error">{error}</div>}
 
       {showLevelUp && (
-        <LevelUpModal newLevel={levelUpTarget} onClose={dismissLevelUp} />
+        <LevelUpModal
+          newLevel={levelUpTarget}
+          heroStyleId={avatar.heroStyleId}
+          onClose={dismissLevelUp}
+        />
       )}
 
       <RoutineViewHeader
@@ -326,6 +339,7 @@ export function RoutineViewScreen({
         avatar={avatar}
         onHealthRecord={onViewHealthRecord}
         onOpenInfo={() => setInfoOpen(true)}
+        onCharacterUpdated={() => void refreshCharacterProgress()}
       />
 
       <ProgressSummaryCard

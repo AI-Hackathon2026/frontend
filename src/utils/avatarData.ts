@@ -4,6 +4,7 @@ import {
   LEVEL_BADGES,
   LEVEL_LABELS,
 } from "../constants/avatar.constants";
+import { heroStyleKeyToId } from "../constants/heroAvatar.constants";
 import type { CharacterProgress } from "../types";
 import { countCompletedTasks, XP_PER_COMPLETION } from "./routineProgress";
 
@@ -12,6 +13,7 @@ export interface AvatarData {
   xp: number;
   label: string;
   badges: string[];
+  heroStyleId: number;
   xpToNext: { current: number; required: number; percent: number };
 }
 
@@ -40,6 +42,7 @@ export function toAvatarData(progress: CharacterProgress): AvatarData {
     xp: progress.xp,
     label: LEVEL_LABELS[level] ?? LEVEL_LABELS[1],
     badges: LEVEL_BADGES[level] ?? [],
+    heroStyleId: heroStyleKeyToId(progress.heroStyle),
     xpToNext: { current, required, percent },
   };
 }
@@ -52,6 +55,7 @@ export function defaultCharacterProgress(): CharacterProgress {
     xpToNext: AVATAR_XP_PER_LEVEL,
     totalCompletions: 0,
     stage: { name: "새싹", emoji: "🌱" },
+    heroStyle: "IRON",
   };
 }
 
@@ -80,6 +84,7 @@ export function characterProgressFromRoutine(
           : AVATAR_XP_PER_LEVEL - xpInLevel,
     totalCompletions,
     stage: defaultCharacterProgress().stage,
+    heroStyle: defaultCharacterProgress().heroStyle,
   };
 }
 

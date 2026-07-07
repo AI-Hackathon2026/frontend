@@ -153,31 +153,39 @@ export function HomePage() {
           <section className="landing-section landing-features landing-panel">
             <h2 className="landing-section-title">핵심 기능</h2>
             <p className="landing-section-subtitle">
-              HeAIth가 제공하는 스마트 건강 서비스
+              건강 분석부터 맞춤 루틴, AI 상담까지 — HeAIth의 핵심 경험
             </p>
-            <div className="landing-feature-grid">
+            <div className="landing-feature-grid landing-feature-grid--four">
               <article className="landing-feature-card">
-                <div className="landing-feature-icon">🤖</div>
-                <h3>AI 건강 챗봇</h3>
+                <div className="landing-feature-icon">📋</div>
+                <h3>맞춤 건강 루틴</h3>
                 <p>
-                  최신 AI 모델과 대화하며 건강 관련 질문에 답변받고, 맞춤형
-                  조언을 받아보세요.
+                  건강 정보를 바탕으로 AI가 운동·식단 루틴을 생성합니다.
+                  난이도를 선택하고 매주 새로운 계획을 받아보세요.
                 </p>
               </article>
               <article className="landing-feature-card">
                 <div className="landing-feature-icon">📊</div>
-                <h3>KNHANES 건강통계</h3>
+                <h3>건강 분석 리포트</h3>
                 <p>
-                  국민건강영양조사 데이터를 탐색하고, AI 기반 질의로 통계
-                  인사이트를 확인하세요.
+                  BMI, 종합 건강 점수, 또래 대비 순위와 만성질환 노출
+                  위험도를 한눈에 확인하세요.
                 </p>
               </article>
               <article className="landing-feature-card">
-                <div className="landing-feature-icon">✨</div>
-                <h3>맞춤형 인사이트</h3>
+                <div className="landing-feature-icon">🦸</div>
+                <h3>루틴 실천 & 캐릭터 성장</h3>
                 <p>
-                  개인화된 건강 정보와 데이터 기반 분석으로 더 나은 건강
-                  결정을 내릴 수 있습니다.
+                  식단·운동을 체크하며 실천률을 기록하고, 완료할 때마다 XP를
+                  모아 히어로 캐릭터가 레벨업합니다.
+                </p>
+              </article>
+              <article className="landing-feature-card">
+                <div className="landing-feature-icon">💬</div>
+                <h3>루틴 AI 상담</h3>
+                <p>
+                  내 루틴에 맞춘 AI 상담으로 운동·식단 질문에 실시간
+                  답변을 받을 수 있습니다.
                 </p>
               </article>
             </div>

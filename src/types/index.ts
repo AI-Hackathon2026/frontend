@@ -172,6 +172,8 @@ export interface CharacterStageInfo {
   emoji: string;
 }
 
+export type HeroStyleKey = "IRON" | "DARK" | "SPIDER";
+
 export interface CharacterProgress {
   level: number;
   xp: number;
@@ -179,6 +181,7 @@ export interface CharacterProgress {
   xpToNext: number;
   totalCompletions: number;
   stage: CharacterStageInfo;
+  heroStyle: HeroStyleKey;
 }
 
 export interface PlanProgressUpdate {
