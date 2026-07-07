@@ -1,16 +1,31 @@
-import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api, saveUsername, saveRole } from "../api/client";
 import { AuthForm } from "../components/AuthForm";
+import {
+  CookieBlockedPrompt,
+  PwaCookieHint,
+} from "../components/CookieBlockedPrompt";
 import { HeAIthLogo } from "../components/HeAIthLogo";
+import { verifyAuthSession } from "../utils/cookieSupport";
 import { verifyIsAdmin, isAdminRole } from "../utils/authRole";
 
 export function AdminAuthPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showCookiePrompt, setShowCookiePrompt] = useState(false);
+
+  useEffect(() => {
+    const state = location.state as { cookieBlocked?: boolean } | null;
+    if (state?.cookieBlocked) {
+      setShowCookiePrompt(true);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -28,6 +43,15 @@ export function AdminAuthPage() {
       }
       saveRole("admin");
       saveUsername(result.username);
+      const sessionOk = await verifyAuthSession();
+      if (!sessionOk) {
+        await api.signOut().catch(() => undefined);
+        setShowCookiePrompt(true);
+        setError(
+          "로그인은 되었지만 쿠키가 차단되어 세션을 유지할 수 없습니다.",
+        );
+        return;
+      }
       navigate("/app", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "인증에 실패했습니다.");
@@ -37,7 +61,8 @@ export function AdminAuthPage() {
   }
 
   return (
-    <div className="auth-split auth-split--admin">
+    <>
+      <div className="auth-split auth-split--admin">
       <div className="auth-split-brand">
         <HeAIthLogo size="lg" />
         <div className="auth-admin-shield" aria-hidden="true">
@@ -56,6 +81,8 @@ export function AdminAuthPage() {
           <p className="auth-subtitle">
             관리자 계정으로 HeAIth 시스템에 접속하세요.
           </p>
+
+          <PwaCookieHint onOpenGuide={() => setShowCookiePrompt(true)} />
 
           <AuthForm
             mode="signin"
@@ -79,6 +106,18 @@ export function AdminAuthPage() {
           </p>
         </div>
       </div>
-    </div>
+      </div>
+
+      <CookieBlockedPrompt
+        open={showCookiePrompt}
+        onClose={() => setShowCookiePrompt(false)}
+        onResolved={() => {
+          setShowCookiePrompt(false);
+          setError("");
+          navigate("/app", { replace: true });
+        }}
+        reason={error ? "login" : "session"}
+      />
+    </>
   );
 }

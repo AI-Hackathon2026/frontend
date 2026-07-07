@@ -1,13 +1,19 @@
-import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api, saveUsername } from "../api/client";
 import { AuthForm } from "../components/AuthForm";
+import {
+  CookieBlockedPrompt,
+  PwaCookieHint,
+} from "../components/CookieBlockedPrompt";
 import { HeAIthLogo } from "../components/HeAIthLogo";
 import { SignupSuccessScreen } from "../components/SignupSuccessScreen";
+import { verifyAuthSession } from "../utils/cookieSupport";
 import { verifyIsAdmin, isAdminRole } from "../utils/authRole";
 
 export function UserAuthPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -16,6 +22,15 @@ export function UserAuthPage() {
   const [emailHint, setEmailHint] = useState("");
   const [loading, setLoading] = useState(false);
   const [signupComplete, setSignupComplete] = useState(false);
+  const [showCookiePrompt, setShowCookiePrompt] = useState(false);
+
+  useEffect(() => {
+    const state = location.state as { cookieBlocked?: boolean } | null;
+    if (state?.cookieBlocked) {
+      setShowCookiePrompt(true);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   async function handleEmailBlur() {
     if (mode !== "signup" || !email.trim()) return;
@@ -46,6 +61,15 @@ export function UserAuthPage() {
           return;
         }
         saveUsername(result.username);
+        const sessionOk = await verifyAuthSession();
+        if (!sessionOk) {
+          await api.signOut().catch(() => undefined);
+          setShowCookiePrompt(true);
+          setError(
+            "로그인은 되었지만 쿠키가 차단되어 세션을 유지할 수 없습니다.",
+          );
+          return;
+        }
         navigate("/app", { replace: true });
       } else {
         await api.signUp(email, username, password);
@@ -59,7 +83,8 @@ export function UserAuthPage() {
   }
 
   return (
-    <div className="auth-split">
+    <>
+      <div className="auth-split">
       <div className="auth-split-brand">
         <Link to="/" className="auth-split-logo-link" aria-label="HeAIth 홈으로">
           <HeAIthLogo size="lg" />
@@ -123,6 +148,8 @@ export function UserAuthPage() {
                 </button>
               </div>
 
+              <PwaCookieHint onOpenGuide={() => setShowCookiePrompt(true)} />
+
               <AuthForm
                 mode={mode}
                 email={email}
@@ -149,6 +176,18 @@ export function UserAuthPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+
+      <CookieBlockedPrompt
+        open={showCookiePrompt}
+        onClose={() => setShowCookiePrompt(false)}
+        onResolved={() => {
+          setShowCookiePrompt(false);
+          setError("");
+          navigate("/app", { replace: true });
+        }}
+        reason={error ? "login" : "session"}
+      />
+    </>
   );
 }
