@@ -105,15 +105,15 @@ export function useRoutineChat({
         };
         setMessages((prev) => [...prev, aiMsg]);
         setStreamingMessageId(aiId);
+        setSending(false);
 
         if (response.routineUpdated && response.routine) {
           onRoutineUpdate(response.routine);
         }
       } catch (err) {
+        setSending(false);
         setMessages((prev) => prev.filter((message) => message.id !== tempUserMsg.id));
         setError(err instanceof Error ? err.message : "메시지 전송에 실패했습니다.");
-      } finally {
-        setSending(false);
       }
     },
     [chatId, sending, onRoutineUpdate],

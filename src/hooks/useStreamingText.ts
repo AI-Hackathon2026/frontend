@@ -1,17 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-function streamStep(remaining: number): number {
-  if (remaining > 800) return 6;
-  if (remaining > 400) return 4;
-  if (remaining > 150) return 3;
-  if (remaining > 40) return 2;
-  return 1;
-}
+const BASE_DELAY_MS = 16;
 
-function pauseForChar(char: string): number {
-  if (char === "\n") return 48;
-  if (".!?".includes(char)) return 28;
-  if (",;:".includes(char)) return 14;
+function delayAfterChar(char: string): number {
+  if (char === "\n") return 64;
+  if (".!?".includes(char)) return 36;
+  if (",;:".includes(char)) return 18;
+  if (char === " ") return 8;
   return 0;
 }
 
@@ -24,11 +19,13 @@ export function useStreamingText(
   const [visibleLength, setVisibleLength] = useState(
     enabled ? 0 : fullText.length,
   );
-  const completedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const onProgressRef = useRef(onProgress);
+
+  onCompleteRef.current = onComplete;
+  onProgressRef.current = onProgress;
 
   useEffect(() => {
-    completedRef.current = false;
-
     if (!enabled) {
       setVisibleLength(fullText.length);
       return;
@@ -36,39 +33,37 @@ export function useStreamingText(
 
     setVisibleLength(0);
     let index = 0;
+    let cancelled = false;
     let timeoutId = 0;
 
     const tick = () => {
-      const remaining = fullText.length - index;
-      if (remaining <= 0) {
-        if (!completedRef.current) {
-          completedRef.current = true;
-          onComplete?.();
-        }
+      if (cancelled) return;
+
+      if (index >= fullText.length) {
+        onCompleteRef.current?.();
         return;
       }
 
-      const step = streamStep(remaining);
-      const nextIndex = Math.min(fullText.length, index + step);
-      const lastChar = fullText[nextIndex - 1] ?? "";
-      index = nextIndex;
-
+      index += 1;
       setVisibleLength(index);
-      onProgress?.();
+      onProgressRef.current?.();
 
-      const delay = 12 + pauseForChar(lastChar);
-      timeoutId = window.setTimeout(tick, delay);
+      const char = fullText[index - 1] ?? "";
+      timeoutId = window.setTimeout(tick, BASE_DELAY_MS + delayAfterChar(char));
     };
 
-    timeoutId = window.setTimeout(tick, 40);
+    timeoutId = window.setTimeout(tick, 80);
 
     return () => {
+      cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [fullText, enabled, onComplete, onProgress]);
+  }, [fullText, enabled]);
+
+  const text = fullText.slice(0, visibleLength);
 
   return {
-    text: fullText.slice(0, visibleLength),
+    text,
     isComplete: !enabled || visibleLength >= fullText.length,
   };
 }

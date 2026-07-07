@@ -40,9 +40,6 @@ export function RoutineMessageBubble({
     onStreamProgress,
   );
 
-  const aiText = !isUser && isStreaming ? streamedText : message.text;
-  const showCursor = !isUser && isStreaming && !isComplete;
-
   return (
     <div
       className={`routine-chat-bubble-row${isUser ? " is-user" : " is-ai"}`}
@@ -56,10 +53,12 @@ export function RoutineMessageBubble({
       <div className={`routine-chat-bubble${isUser ? " is-user" : " is-ai"}`}>
         {isUser ? (
           message.text
-        ) : (
-          <div className={showCursor ? "routine-chat-streaming" : undefined}>
-            <MarkdownContent content={aiText} />
+        ) : isStreaming && !isComplete ? (
+          <div className="routine-chat-streaming">
+            <p className="routine-chat-streaming-text">{streamedText}</p>
           </div>
+        ) : (
+          <MarkdownContent content={message.text} />
         )}
         {time && isComplete && (
           <div className="routine-chat-bubble-time">{time}</div>
