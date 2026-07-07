@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { HeAIthLogo } from "../components/HeAIthLogo";
 
-const PAGE_COUNT = 3;
+const PAGE_COUNT = 4;
 const FADE_MS = 480;
 const WHEEL_THRESHOLD = 36;
 
 type FadePhase = "steady" | "out" | "in";
 
-const PAGE_LABELS = ["메인", "핵심 기능", "이용 방법"];
+const PAGE_LABELS = ["메인", "소개 영상", "핵심 기능", "이용 방법"];
 
 export function HomePage() {
   const [page, setPage] = useState(0);
@@ -16,6 +16,7 @@ export function HomePage() {
   const locked = useRef(false);
   const touchStartY = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const featureVideoRef = useRef<HTMLVideoElement>(null);
 
   const goToPage = useCallback(
     (target: number) => {
@@ -89,6 +90,19 @@ export function HomePage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [goToPage, page]);
 
+  useEffect(() => {
+    const video = featureVideoRef.current;
+    if (!video) return;
+
+    if (page === 1) {
+      void video.play().catch(() => undefined);
+      return;
+    }
+
+    video.pause();
+    video.currentTime = 0;
+  }, [page]);
+
   function handleTouchStart(event: React.TouchEvent) {
     touchStartY.current = event.touches[0]?.clientY ?? 0;
   }
@@ -132,7 +146,7 @@ export function HomePage() {
                   className="ghost-btn landing-cta-secondary"
                   onClick={() => goToPage(1)}
                 >
-                  기능 살펴보기
+                  소개 영상 보기
                 </button>
               </div>
             </div>
@@ -150,6 +164,28 @@ export function HomePage() {
         )}
 
         {page === 1 && (
+          <section className="landing-section landing-video landing-panel">
+            <h2 className="landing-section-title">HeAIth 소개</h2>
+            <p className="landing-section-subtitle">
+              맞춤 건강 루틴과 AI 상담이 어떻게 동작하는지 확인해 보세요
+            </p>
+            <div className="landing-video-wrap">
+              <video
+                ref={featureVideoRef}
+                className="landing-video-player"
+                src="/video/heaith-demo.mp4"
+                controls
+                playsInline
+                muted
+                loop
+                preload="metadata"
+                aria-label="HeAIth 서비스 소개 영상"
+              />
+            </div>
+          </section>
+        )}
+
+        {page === 2 && (
           <section className="landing-section landing-features landing-panel">
             <h2 className="landing-section-title">핵심 기능</h2>
             <p className="landing-section-subtitle">
@@ -192,7 +228,7 @@ export function HomePage() {
           </section>
         )}
 
-        {page === 2 && (
+        {page === 3 && (
           <section className="landing-section landing-steps landing-panel">
             <h2 className="landing-section-title">이용 방법</h2>
             <p className="landing-section-subtitle">3단계로 시작하세요</p>
