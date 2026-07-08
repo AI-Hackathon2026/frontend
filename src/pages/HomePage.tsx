@@ -236,22 +236,31 @@ export function HomePage() {
               <li className="landing-step">
                 <span className="landing-step-num">01</span>
                 <div>
-                  <h3>회원가입</h3>
-                  <p>이메일로 간편하게 계정을 만드세요.</p>
+                  <h3>회원가입 &amp; 건강 정보 입력</h3>
+                  <p>
+                    계정을 만들고 키·몸무게·생활습관을 입력하면 건강 점수와
+                    분석 리포트를 확인할 수 있어요.
+                  </p>
                 </div>
               </li>
               <li className="landing-step">
                 <span className="landing-step-num">02</span>
                 <div>
-                  <h3>AI에게 질문</h3>
-                  <p>건강 관련 궁금한 점을 AI 챗봇에게 물어보세요.</p>
+                  <h3>맞춤 루틴 받기</h3>
+                  <p>
+                    국민건강통계 기반으로 AI가 나에게 맞는 운동·식단 루틴을
+                    생성합니다. 난이도를 골라 시작하세요.
+                  </p>
                 </div>
               </li>
               <li className="landing-step">
                 <span className="landing-step-num">03</span>
                 <div>
-                  <h3>데이터 탐색</h3>
-                  <p>KNHANES 통계로 더 깊은 건강 인사이트를 얻으세요.</p>
+                  <h3>실천하며 성장하기</h3>
+                  <p>
+                    매일 루틴을 체크해 캐릭터를 레벨업하고, 궁금한 점은 AI
+                    상담으로 바로 해결하세요.
+                  </p>
                 </div>
               </li>
             </ol>
